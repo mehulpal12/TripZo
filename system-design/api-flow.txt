@@ -1,0 +1,29 @@
+RIDER
+
+POST /auth/register
+POST /auth/login
+
+GET /rides/fare
+
+POST /rides
+POST /rides/schedule
+
+GET /rides/:id
+
+POST /rides/:id/cancel
+POST /rides/:id/rating
+
+
+CAPTAIN
+
+POST /captains/login
+POST /captains/online
+POST /captains/offline
+
+POST /captains/location
+
+POST /rides/:id/accept
+POST /rides/:id/reject
+POST /rides/:id/arrived
+POST /rides/:id/start
+POST /rides/:id/complete
