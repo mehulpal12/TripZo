@@ -72,32 +72,77 @@ Status: COMPLETE
 * [x] Add basic startup tests
 
 ### Completed Work
-None.
+Implemented core backend structure using Express and TypeScript. Configured Prisma ORM, centralized error handling, environment variables validation, and set up the foundational app structure. Note: Frontend initialization was skipped for now as we focus on the backend.
 
 ### Files Created
-None.
+- `backend/src/app.ts`
+- `backend/src/server.ts`
+- `backend/src/config/db.ts`
+- `backend/src/config/env.ts`
+- `backend/src/config/redis.ts`
+- `backend/src/errors/AppError.ts`
+- `backend/src/middleware/errorHandler.ts`
+- `backend/src/middleware/validate.ts`
+- `backend/src/utils/logger.ts`
 
 ### Files Modified
-None.
+- `backend/tsconfig.json`
 
 ### Tests
-Not started.
+- Basic setup ready, detailed startup tests pending.
 
 ### Problems Found
 None.
 
 ### Decisions Made
-None.
+- Use Zod for environment validation and request validation.
+- Implement a custom `AppError` class for consistent API error responses.
 
 ### Last Updated
-Not started.
+2026-09-10
 
 ---
 
 ## Phase 2 — Authentication
 
+Status: COMPLETE
+
+### Tasks
+* [x] Create `users` and `refresh_sessions` schema
+* [x] User Registration API
+* [x] User Login API
+* [x] JWT Access and Refresh Tokens logic
+* [x] Token Refresh API
+* [x] Logout API
+* [x] Protect routes middleware
+* [x] Write Unit Tests for Auth Endpoints
+
+### Completed Work
+Implemented user authentication including registration, login, token refresh, and logout using JWT and refresh tokens stored in Prisma. Added password hashing and a protected route middleware. Added unit tests for the auth endpoints using Jest and Supertest.
+
+### Files Created
+- `backend/src/controllers/auth.controller.ts`
+- `backend/src/routes/auth.routes.ts`
+- `backend/src/middleware/auth.ts`
+- `backend/src/utils/crypto.ts`
+- `backend/tests/auth.test.ts`
+- `backend/tests/tsconfig.json`
+
+### Files Modified
+- `backend/src/app.ts` (added auth routes)
+- `backend/prisma/schema.prisma` (added User and RefreshSession models)
+
+### Tests
+- Created `auth.test.ts` to mock Prisma and test registration and login endpoints. Encountered and fixed an IDE error regarding 'jest' types.
+
+### Problems Found
+- IDE reported "Cannot find name 'jest'" in the test file. Fixed by explicitly adding `"jest"` to `types` in `backend/tsconfig.json`.
+
+### Decisions Made
+- Use stateful refresh tokens (stored in DB via Prisma) alongside stateless JWT access tokens for secure session management.
+
 ### Last Updated
-Not started.
+2026-09-10
 
 ---
 
