@@ -33,9 +33,11 @@ app.get('/ready', async (req, res) => {
 
 import authRoutes from './routes/auth.routes';
 import rideRoutes from './routes/ride.routes';
+import captainRoutes from './routes/captain.routes';
 
 app.use('/auth', authRoutes);
 app.use('/rides', rideRoutes);
+app.use('/captains', captainRoutes);
 
 // Centralized error handler
 app.use(errorHandler);

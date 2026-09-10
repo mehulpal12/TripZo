@@ -196,39 +196,51 @@ Implemented the database schema for `Captain` and `Ride` using Prisma. Included 
 
 ## Phase 4 — Captain System
 
-Status: NOT STARTED
+Status: COMPLETE
 
 ### Tasks
-* [ ] POST `/captains/online` API
-* [ ] POST `/captains/offline` API
-* [ ] GET `/captains/rides` API
-* [ ] POST `/rides/:rideId/accept` API
-* [ ] POST `/rides/:rideId/reject` API
-* [ ] POST `/rides/:rideId/arrived` API
-* [ ] POST `/rides/:rideId/start` API
-* [ ] POST `/rides/:rideId/complete` API
-* [ ] Atomic captain assignment logic
+* [x] POST `/captains/online` API
+* [x] POST `/captains/offline` API
+* [x] GET `/captains/rides` API
+* [x] POST `/rides/:rideId/accept` API
+* [x] POST `/rides/:rideId/reject` API
+* [x] POST `/rides/:rideId/arrived` API
+* [x] POST `/rides/:rideId/start` API
+* [x] POST `/rides/:rideId/complete` API
+* [x] Atomic captain assignment logic
 
 ### Completed Work
-None.
+Implemented the full Captain lifecycle and state transitions. Added the `RideRejection` model to the schema to track and prevent captains from receiving or accepting rides they previously rejected. Built the `captain.service.ts` to manage `ONLINE` and `OFFLINE` status. Upgraded `ride.service.ts` with atomic OCC functions to accept, reject, arrive, start, and complete rides, strictly enforcing permissions and correct sequential state transitions. Added dedicated `/captains` routes and mounted them under `app.ts`. Unit tests were created to verify atomic assignments and status updates.
 
 ### Files Created
-None.
+- `backend/src/services/captain.service.ts`
+- `backend/src/controllers/captain.controller.ts`
+- `backend/src/routes/captain.routes.ts`
+- `backend/tests/captain.test.ts`
 
 ### Files Modified
-None.
+- `backend/prisma/schema.prisma` (added `RideRejection` and updated relations)
+- `backend/src/services/ride.service.ts` (added new state machine handlers)
+- `backend/src/controllers/ride.controller.ts` (added intent endpoint logic)
+- `backend/src/routes/ride.routes.ts` (mounted intent endpoints)
+- `backend/src/app.ts` (mounted `/captains` router)
 
 ### Tests
-Not started.
+- Wrote tests for online/offline toggle functionality.
+- Verified state transitions inside the captain system.
+- Confirmed race conditions and invalid permissions revert with a `409 Conflict` or `403 Forbidden`.
 
 ### Problems Found
 None.
 
 ### Decisions Made
-None.
+- `RideRejection` tracks unique pairs of `rideId` and `captainId` to prevent offering the same ride multiple times to a rejecting captain.
+- Final Fare currently resolves to the Estimated Fare natively upon completion for the MVP.
 
 ### Last Updated
-Not started.
+2026-09-10
+
+
 
 ---
 

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { estimateFare } from '../services/fare.service';
-import { createRide, getRideById, cancelRide } from '../services/ride.service';
+import { createRide, getRideById, cancelRide, acceptRide, rejectRide, markCaptainArrived, startRide, completeRide } from '../services/ride.service';
 import { prisma } from '../config/db';
 
 export const getFare = async (req: Request, res: Response, next: NextFunction) => {
@@ -114,6 +114,61 @@ export const cancel = async (req: Request, res: Response, next: NextFunction) =>
       success: true,
       data: cancelledRide,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const accept = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rideId } = req.params;
+    const { userId } = req.user!;
+    const ride = await acceptRide(rideId as string, userId);
+    res.status(200).json({ success: true, data: ride });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reject = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rideId } = req.params;
+    const { userId } = req.user!;
+    const result = await rejectRide(rideId as string, userId);
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const arrived = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rideId } = req.params;
+    const { userId } = req.user!;
+    const ride = await markCaptainArrived(rideId as string, userId);
+    res.status(200).json({ success: true, data: ride });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const start = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rideId } = req.params;
+    const { userId } = req.user!;
+    const ride = await startRide(rideId as string, userId);
+    res.status(200).json({ success: true, data: ride });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const complete = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rideId } = req.params;
+    const { userId } = req.user!;
+    const ride = await completeRide(rideId as string, userId);
+    res.status(200).json({ success: true, data: ride });
   } catch (error) {
     next(error);
   }

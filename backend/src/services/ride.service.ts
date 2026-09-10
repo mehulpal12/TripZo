@@ -93,4 +93,190 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
   return prisma.ride.findUnique({ where: { id: rideId } });
 };
 
-// Additional transition functions like acceptRide, startRide, completeRide will go here in future phases (Captain system).
+// Additional transition functions
+
+export const acceptRide = async (rideId: string, captainUserId: string) => {
+  const captain = await prisma.captain.findUnique({ where: { userId: captainUserId } });
+  if (!captain) {
+    throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain not found');
+  }
+
+  const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+  if (!ride) {
+    throw new AppError('RIDE_NOT_FOUND', 404, 'Ride not found');
+  }
+
+  if (ride.status !== RideStatus.SEARCHING) {
+    throw new AppError('INVALID_STATE', 409, 'Ride is no longer searching for a captain');
+  }
+
+  // Check if this captain previously rejected this ride
+  const rejection = await prisma.rideRejection.findUnique({
+    where: {
+      rideId_captainId: {
+        rideId: ride.id,
+        captainId: captain.id,
+      }
+    }
+  });
+
+  if (rejection) {
+    throw new AppError('INVALID_STATE', 409, 'You have already rejected this ride');
+  }
+
+  const updatedCount = await prisma.ride.updateMany({
+    where: {
+      id: rideId,
+      status: RideStatus.SEARCHING,
+      version: ride.version,
+    },
+    data: {
+      status: RideStatus.CAPTAIN_ASSIGNED,
+      captainId: captain.id,
+      assignedAt: new Date(),
+      version: ride.version + 1,
+    },
+  });
+
+  if (updatedCount.count === 0) {
+    throw new AppError('CONCURRENCY_ERROR', 409, 'Ride was accepted by someone else or cancelled.');
+  }
+
+  return prisma.ride.findUnique({ where: { id: rideId } });
+};
+
+export const rejectRide = async (rideId: string, captainUserId: string) => {
+  const captain = await prisma.captain.findUnique({ where: { userId: captainUserId } });
+  if (!captain) {
+    throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain not found');
+  }
+
+  const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+  if (!ride) {
+    throw new AppError('RIDE_NOT_FOUND', 404, 'Ride not found');
+  }
+
+  // Create a rejection record if it doesn't exist
+  await prisma.rideRejection.upsert({
+    where: {
+      rideId_captainId: {
+        rideId: ride.id,
+        captainId: captain.id,
+      }
+    },
+    create: {
+      rideId: ride.id,
+      captainId: captain.id,
+    },
+    update: {}
+  });
+
+  return { success: true };
+};
+
+export const markCaptainArrived = async (rideId: string, captainUserId: string) => {
+  const captain = await prisma.captain.findUnique({ where: { userId: captainUserId } });
+  if (!captain) throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain not found');
+
+  const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+  if (!ride) throw new AppError('RIDE_NOT_FOUND', 404, 'Ride not found');
+
+  if (ride.captainId !== captain.id) {
+    throw new AppError('UNAUTHORIZED', 403, 'You are not assigned to this ride');
+  }
+
+  if (ride.status !== RideStatus.CAPTAIN_ASSIGNED && ride.status !== RideStatus.CAPTAIN_ARRIVING) {
+    throw new AppError('INVALID_STATE', 409, `Cannot arrive from status ${ride.status}`);
+  }
+
+  const updatedCount = await prisma.ride.updateMany({
+    where: {
+      id: rideId,
+      status: ride.status,
+      version: ride.version,
+    },
+    data: {
+      status: RideStatus.CAPTAIN_ARRIVED,
+      version: ride.version + 1,
+    },
+  });
+
+  if (updatedCount.count === 0) {
+    throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified.');
+  }
+
+  return prisma.ride.findUnique({ where: { id: rideId } });
+};
+
+export const startRide = async (rideId: string, captainUserId: string) => {
+  const captain = await prisma.captain.findUnique({ where: { userId: captainUserId } });
+  if (!captain) throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain not found');
+
+  const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+  if (!ride) throw new AppError('RIDE_NOT_FOUND', 404, 'Ride not found');
+
+  if (ride.captainId !== captain.id) {
+    throw new AppError('UNAUTHORIZED', 403, 'You are not assigned to this ride');
+  }
+
+  if (ride.status !== RideStatus.CAPTAIN_ARRIVED) {
+    throw new AppError('INVALID_STATE', 409, `Cannot start from status ${ride.status}. Captain must arrive first.`);
+  }
+
+  const updatedCount = await prisma.ride.updateMany({
+    where: {
+      id: rideId,
+      status: ride.status,
+      version: ride.version,
+    },
+    data: {
+      status: RideStatus.IN_PROGRESS,
+      startedAt: new Date(),
+      version: ride.version + 1,
+    },
+  });
+
+  if (updatedCount.count === 0) {
+    throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified.');
+  }
+
+  return prisma.ride.findUnique({ where: { id: rideId } });
+};
+
+export const completeRide = async (rideId: string, captainUserId: string) => {
+  const captain = await prisma.captain.findUnique({ where: { userId: captainUserId } });
+  if (!captain) throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain not found');
+
+  const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+  if (!ride) throw new AppError('RIDE_NOT_FOUND', 404, 'Ride not found');
+
+  if (ride.captainId !== captain.id) {
+    throw new AppError('UNAUTHORIZED', 403, 'You are not assigned to this ride');
+  }
+
+  if (ride.status !== RideStatus.IN_PROGRESS) {
+    throw new AppError('INVALID_STATE', 409, `Cannot complete from status ${ride.status}. Ride must be in progress.`);
+  }
+
+  // Calculate final fare... typically equals estimated unless rerouted. For MVP, we'll set finalFare = estimatedFare.
+  
+  const updatedCount = await prisma.ride.updateMany({
+    where: {
+      id: rideId,
+      status: ride.status,
+      version: ride.version,
+    },
+    data: {
+      status: RideStatus.COMPLETED,
+      completedAt: new Date(),
+      finalFare: ride.estimatedFare,
+      version: ride.version + 1,
+    },
+  });
+
+  if (updatedCount.count === 0) {
+    throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified.');
+  }
+
+  return prisma.ride.findUnique({ where: { id: rideId } });
+};

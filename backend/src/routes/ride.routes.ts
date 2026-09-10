@@ -8,6 +8,11 @@ import {
   getRide,
   getRideHistory,
   cancel,
+  accept,
+  reject,
+  arrived,
+  start,
+  complete,
 } from '../controllers/ride.controller';
 
 const router = Router();
@@ -49,5 +54,10 @@ router.post('/', validate(createRideSchema), createImmediateRide);
 router.get('/', getRideHistory);
 router.get('/:rideId', getRide);
 router.post('/:rideId/cancel', validate(cancelRideSchema), cancel);
+router.post('/:rideId/accept', accept);
+router.post('/:rideId/reject', reject);
+router.post('/:rideId/arrived', arrived);
+router.post('/:rideId/start', start);
+router.post('/:rideId/complete', complete);
 
 export default router;

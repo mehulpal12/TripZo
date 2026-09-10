@@ -57,6 +57,7 @@ model Captain {
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   ridesAsCaptain Ride[]        @relation("RideCaptain")
+  rejections     RideRejection[]
 }
 
 model Ride {
@@ -93,10 +94,24 @@ model Ride {
   rider              User       @relation("RideRider", fields: [riderId], references: [id])
   captain            Captain?   @relation("RideCaptain", fields: [captainId], references: [id])
 
+  rejections         RideRejection[]
+
   @@index([riderId])
   @@index([captainId])
   @@index([status])
   @@index([scheduledAt(sort: Asc)])
+}
+
+model RideRejection {
+  id        String   @id @default(uuid())
+  rideId    String
+  captainId String
+  createdAt DateTime @default(now())
+
+  ride      Ride     @relation(fields: [rideId], references: [id])
+  captain   Captain  @relation(fields: [captainId], references: [id])
+
+  @@unique([rideId, captainId])
 }
 
 model RefreshSession {

@@ -26,6 +26,14 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         passwordHash: hashedPassword,
         role: role as Role,
         name,
+        ...(role === 'CAPTAIN' && {
+          captainProfile: {
+            create: {
+              vehicleType: 'BIKE',
+              vehicleNumber: `TEST-${Math.floor(1000 + Math.random() * 9000)}`, // Auto-generate for MVP testing
+            }
+          }
+        })
       },
     });
 
