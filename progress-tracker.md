@@ -4,7 +4,7 @@
 
 * [x] Phase 0 — Project Understanding
 * [x] Phase 1 — Foundation
-* [ ] Phase 2 — Authentication
+* [x] Phase 2 — Authentication
 * [ ] Phase 3 — Database & Core Ride
 * [ ] Phase 4 — Captain System
 * [ ] Phase 5 — Matching
@@ -95,39 +95,6 @@ Not started.
 ---
 
 ## Phase 2 — Authentication
-
-Status: NOT STARTED
-
-### Tasks
-* [ ] Create `users` migration
-* [ ] Create `refresh_sessions` migration
-* [ ] Password hashing
-* [ ] Registration API
-* [ ] Login API
-* [ ] Access token logic
-* [ ] Refresh token rotation
-* [ ] Logout API
-* [ ] Role middleware
-* [ ] Resource authorization
-* [ ] Authentication tests
-
-### Completed Work
-None.
-
-### Files Created
-None.
-
-### Files Modified
-None.
-
-### Tests
-Not started.
-
-### Problems Found
-None.
-
-### Decisions Made
-None.
 
 ### Last Updated
 Not started.

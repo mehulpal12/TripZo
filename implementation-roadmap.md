@@ -37,7 +37,7 @@ None.
 1. Initialize monorepo structure (`apps/api`, `apps/web`)
 2. Configure TypeScript, Express app, and React app
 3. Configure environment variables mapping
-4. Configure PostgreSQL connection and migrations framework (e.g. Knex/Prisma/Sequelize, though native pg or query builder is usually preferred for raw SQL control)
+4. Configure NeonDB PostgreSQL connection and Prisma ORM migrations framework
 5. Configure Redis connection
 6. Set up centralized error handling middleware
 7. Implement request validation framework
@@ -52,7 +52,7 @@ None.
 
 ### Acceptance criteria
 - Both React and Express servers can start.
-- Express connects successfully to PostgreSQL and Redis.
+- Express connects successfully to NeonDB via Prisma and Redis.
 - Health endpoint returns 200 OK.
 - Database migrations can run.
 
@@ -70,8 +70,7 @@ Phase 1 (Foundation)
 - `Brain/database-design.md`
 
 ### Tasks
-1. Create `users` migration
-2. Create `refresh_sessions` migration
+1. Create Prisma `User`, `Role` (USER, ADMIN, CAPTAIN) and `RefreshSession` models
 3. Implement `Auth` module (controller, service, repository, validation, routes)
 4. Add password hashing
 5. Create POST `/auth/register` and POST `/auth/login`

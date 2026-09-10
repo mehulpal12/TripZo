@@ -31,6 +31,9 @@ app.get('/ready', async (req, res) => {
   }
 });
 
+import authRoutes from './routes/auth.routes';
+app.use('/auth', authRoutes);
+
 // Centralized error handler
 app.use(errorHandler);
 
