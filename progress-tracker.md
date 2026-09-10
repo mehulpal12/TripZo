@@ -43,7 +43,9 @@ Not applicable.
 None critical.
 
 ### Decisions Made
-Generated artifacts will live in the project root to serve as top-level guides.
+- Skipped `apps/api` monorepo structure in favor of a simpler `backend` root folder to follow the user's manual initialization.
+- Switched to Prisma ORM instead of raw `pg` driver.
+- Configured application to use NeonDB managed cloud Postgres database, dropping local Postgres from Docker.p-level guides.
 
 ### Last Updated
 2026-09-10

@@ -3,8 +3,8 @@ import app from '../src/app';
 
 // Mock DB and Redis to avoid actual connection overhead during simple health checks
 jest.mock('../src/config/db', () => ({
-  pool: {
-    query: jest.fn().mockResolvedValue({ rows: [{ '?column?': 1 }] })
+  prisma: {
+    $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }])
   }
 }));
 

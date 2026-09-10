@@ -1,21 +1,25 @@
-import { Pool } from 'pg';
-import { env } from './env';
+import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 
-export const pool = new Pool({
-  connectionString: env.DATABASE_URL,
+export const prisma = new PrismaClient({
+  log: [
+    { level: 'warn', emit: 'event' },
+    { level: 'error', emit: 'event' },
+  ],
 });
 
-pool.on('error', (err) => {
-  logger.error('Unexpected error on idle client', err);
-  process.exit(-1);
+prisma.$on('warn', (e: any) => {
+  logger.warn(e.message);
+});
+
+prisma.$on('error', (e: any) => {
+  logger.error(e.message);
 });
 
 export const connectDB = async () => {
   try {
-    const client = await pool.connect();
-    logger.info('Connected to PostgreSQL successfully');
-    client.release();
+    await prisma.$connect();
+    logger.info('Connected to PostgreSQL successfully via Prisma');
   } catch (err) {
     logger.error('Failed to connect to PostgreSQL', err);
     process.exit(-1);

@@ -1,6 +1,6 @@
 import app from './app';
 import { env } from './config/env';
-import { connectDB, pool } from './config/db';
+import { connectDB, prisma } from './config/db';
 import { connectRedis, redisClient } from './config/redis';
 import { logger } from './utils/logger';
 import { createHttpTerminator } from 'http-terminator';
@@ -21,7 +21,7 @@ const startServer = async () => {
       await httpTerminator.terminate();
       logger.info('HTTP server closed');
       
-      await pool.end();
+      await prisma.$disconnect();
       logger.info('PostgreSQL connection closed');
       
       await redisClient.quit();

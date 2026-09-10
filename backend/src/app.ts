@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { errorHandler } from './middleware/errorHandler';
 import { env } from './config/env';
-import { pool } from './config/db';
+import { prisma } from './config/db';
 import { redisClient } from './config/redis';
 
 const app = express();
@@ -21,7 +21,7 @@ app.get('/health', (req, res) => {
 app.get('/ready', async (req, res) => {
   try {
     // Check DB
-    await pool.query('SELECT 1');
+    await prisma.$queryRaw`SELECT 1`;
     // Check Redis
     if (!redisClient.isReady) throw new Error('Redis is not ready');
     

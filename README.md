@@ -1,6 +1,6 @@
-# Rapido - Ride-Hailing Platform
+# TripZo - Ride-Hailing Platform
 
-A production-oriented learning project for a ride-hailing platform (like Uber or Rapido).
+A production-oriented learning project for the TripZo ride-hailing platform.
 
 This repository follows a strict documentation-driven development process. Please read the documentation in the `Brain/` directory before contributing or modifying the codebase.
 
