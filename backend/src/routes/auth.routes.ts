@@ -9,7 +9,9 @@ const registerSchema = z.object({
   body: z.object({
     email: z.string().email(),
     password: z.string().min(6),
-    role: z.enum(['USER', 'ADMIN', 'CAPTAIN']).default('USER'),
+    role: z.enum(['RIDER', 'ADMIN', 'CAPTAIN']).default('RIDER'),
+    name: z.string().optional(),
+    phone: z.string().optional()
   }),
 });
 

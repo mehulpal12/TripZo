@@ -9,12 +9,14 @@ import { env } from '../config/env';
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role, name } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new AppError('USER_EXISTS', 409, 'User with this email already exists');
     }
+
+
 
     const hashedPassword = await hashPassword(password);
 
@@ -23,6 +25,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         email,
         passwordHash: hashedPassword,
         role: role as Role,
+        name,
       },
     });
 

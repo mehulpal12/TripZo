@@ -38,13 +38,13 @@ describe('Auth Endpoints', () => {
     (prisma.user.create as jest.Mock).mockResolvedValue({
       id: 'uuid-123',
       email: 'test@example.com',
-      role: 'USER',
+      role: 'RIDER',
     });
 
     const response = await request(app).post('/auth/register').send({
       email: 'test@example.com',
       password: 'password123',
-      role: 'USER',
+      role: 'RIDER',
     });
 
     expect(response.status).toBe(201);
@@ -59,7 +59,7 @@ describe('Auth Endpoints', () => {
       id: 'uuid-123',
       email: 'test@example.com',
       passwordHash: hashedPassword,
-      role: 'USER',
+      role: 'RIDER',
     });
 
     (prisma.refreshSession.create as jest.Mock).mockResolvedValue({});

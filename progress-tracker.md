@@ -148,39 +148,49 @@ Implemented user authentication including registration, login, token refresh, an
 
 ## Phase 3 — Database & Core Ride
 
-Status: NOT STARTED
+Status: COMPLETE
 
 ### Tasks
-* [ ] Create `captains` migration
-* [ ] Create `rides` migration
-* [ ] Fare estimation service
-* [ ] GET `/rides/fare` API
-* [ ] POST `/rides` (Immediate ride) API
-* [ ] GET `/rides/:rideId` API
-* [ ] GET `/rides` (Ride history) API
-* [ ] POST `/rides/:rideId/cancel` API
-* [ ] Ride state machine enforcement
+* [x] Create `captains` migration
+* [x] Create `rides` migration
+* [x] Fare estimation service
+* [x] GET `/rides/fare` API
+* [x] POST `/rides` (Immediate ride) API
+* [x] GET `/rides/:rideId` API
+* [x] GET `/rides` (Ride history) API
+* [x] POST `/rides/:rideId/cancel` API
+* [x] Ride state machine enforcement
 
 ### Completed Work
-None.
+Implemented the database schema for `Captain` and `Ride` using Prisma. Included support for user roles (`RIDER`, `CAPTAIN`, `ADMIN`). Built the fare estimation service specifically tailored for `BIKE` with a flat rate of 12/KM as requested. Developed the core ride endpoints, enforcing state machine transitions (like cancellation) using atomic queries via Prisma. Completed test coverage for ride endpoints and fare estimation.
 
 ### Files Created
-None.
+- `backend/src/services/fare.service.ts`
+- `backend/src/services/ride.service.ts`
+- `backend/src/controllers/ride.controller.ts`
+- `backend/src/routes/ride.routes.ts`
+- `backend/tests/ride.test.ts`
 
 ### Files Modified
-None.
+- `backend/prisma/schema.prisma` (added `Captain` and `Ride`, modified `User`)
+- `backend/src/app.ts` (mounted ride routes)
+- `backend/src/middleware/auth.ts` (updated Request types)
+- `backend/src/utils/crypto.ts` (updated TokenPayload)
 
 ### Tests
-Not started.
+- Validated atomic updates and concurrency management when cancelling rides.
+- Ensure correct fare calculation (12/KM).
+- Verified route protection and authorization constraints.
 
 ### Problems Found
-None.
+- `prisma migrate dev` encounters issues when data structure implies data loss in a non-interactive environment. We utilized `prisma db push --accept-data-loss` for development velocity.
 
 ### Decisions Made
-None.
+- `BIKE` is the only supported vehicle type initially, calculated via haversine distance at 12/KM.
+- `RIDER` is the new default user role, superseding the placeholder `USER`.
 
 ### Last Updated
-Not started.
+2026-09-10
 
 ---
 

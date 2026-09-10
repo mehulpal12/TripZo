@@ -32,7 +32,10 @@ app.get('/ready', async (req, res) => {
 });
 
 import authRoutes from './routes/auth.routes';
+import rideRoutes from './routes/ride.routes';
+
 app.use('/auth', authRoutes);
+app.use('/rides', rideRoutes);
 
 // Centralized error handler
 app.use(errorHandler);

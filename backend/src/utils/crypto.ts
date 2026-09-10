@@ -11,9 +11,11 @@ export const comparePassword = async (password: string, hash: string): Promise<b
   return bcrypt.compare(password, hash);
 };
 
+import { Role } from '@prisma/client';
+
 export interface TokenPayload {
   userId: string;
-  role: string;
+  role: Role;
 }
 
 export const generateAccessToken = (payload: TokenPayload): string => {
