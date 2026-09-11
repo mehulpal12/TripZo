@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { env } from './config/env';
 import { TokenPayload } from './utils/crypto';
 import { redisClient } from './config/redis';
+import { createAdapter } from '@socket.io/redis-adapter';
 
 let io: SocketIOServer;
 
@@ -13,6 +14,15 @@ export const initializeSocket = (httpServer: HttpServer) => {
       origin: '*', // Adjust for production
       methods: ['GET', 'POST'],
     },
+  });
+
+  // Configure Redis Adapter for horizontal scaling
+  const pubClient = redisClient.duplicate();
+  const subClient = redisClient.duplicate();
+  Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+    io.adapter(createAdapter(pubClient, subClient));
+  }).catch(err => {
+    console.error('Failed to initialize Redis Adapter:', err);
   });
 
   // Authentication middleware
@@ -55,7 +65,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
     });
 
     // Receive captain location and update Redis GEO
-    socket.on('captain:location', async (data: { lat: number; lng: number }) => {
+    socket.on('captain:location', async (data: { rideId?: string; lat: number; lng: number; timestamp?: number }) => {
       if (user.role !== 'CAPTAIN') return;
 
       try {
@@ -64,22 +74,40 @@ export const initializeSocket = (httpServer: HttpServer) => {
             return;
         }
 
-        const { lat, lng } = data;
-        
-        // GEOADD key longitude latitude member
-        await redisClient.geoAdd('captain_locations', {
-          longitude: lng,
-          latitude: lat,
-          member: user.userId,
-        }).then(() => {
-            console.log(`Captain location updated: ${lat}, ${lng}`);
-        }).catch((err) => {
-            console.error('Error updating captain location:', err);
-        });
+        const { rideId, lat, lng, timestamp = Date.now() } = data;
 
-        // Set an expiry mechanism so offline captains don't stay forever.
-        // Redis GEO doesn't support TTL per member, but we can set a separate expiring key or just clean up on disconnect.
-        // For MVP, we'll just track that we got an update.
+        // If they provide a rideId, validate assignment
+        if (rideId) {
+            const assignedRide = await redisClient.get(`ride_assignment:${user.userId}`);
+            if (assignedRide !== rideId) {
+                return; // Unauthorized or stale broadcast
+            }
+        }
+
+        // Stale location protection
+        const storedTimestamp = await redisClient.hGet('captain_location_meta', user.userId);
+        if (storedTimestamp && timestamp <= parseInt(storedTimestamp, 10)) {
+            return; // Reject older event
+        }
+        
+        // Write to Redis
+        await Promise.all([
+            redisClient.geoAdd('captain_locations', {
+                longitude: lng,
+                latitude: lat,
+                member: user.userId,
+            }),
+            redisClient.hSet('captain_location_meta', user.userId, timestamp.toString())
+        ]);
+
+        // Broadcast to ride room if active
+        if (rideId) {
+            io.to(`ride:${rideId}`).emit('captain:location', {
+                lat,
+                lng,
+                timestamp
+            });
+        }
       } catch (err) {
         console.error('Error updating captain location:', err);
       }

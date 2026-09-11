@@ -3,6 +3,7 @@ import { AppError } from '../errors/AppError';
 import { RideStatus, Role, CaptainStatus } from '@prisma/client';
 import { getNearbyCaptains } from './matching.service';
 import { getIO } from '../socket';
+import { redisClient } from '../config/redis';
 
 export const createRide = async (data: {
   riderId: string;
@@ -87,7 +88,22 @@ export const getRideById = async (rideId: string, userId: string, role: Role) =>
     throw new AppError('UNAUTHORIZED', 403, 'Not authorized to view this ride');
   }
 
-  return ride;
+  // Attach latest real-time location if captain is assigned
+  let captainLocation = null;
+  if (ride.captain && redisClient.isReady) {
+    const geoPos = await redisClient.geoPos('captain_locations', ride.captain.userId);
+    if (geoPos && geoPos[0]) {
+      captainLocation = {
+        lat: geoPos[0].latitude,
+        lng: geoPos[0].longitude,
+      };
+    }
+  }
+
+  return {
+    ...ride,
+    captainLocation,
+  };
 };
 
 export const cancelRide = async (rideId: string, userId: string, role: Role, reason?: string) => {
@@ -135,6 +151,14 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
 
   if (updatedCount.count === 0) {
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified by another request. Please try again.');
+  }
+
+  // Clear Redis assignment cache if assigned
+  if (redisClient.isReady && ride.captainId) {
+    const assignedCaptain = await prisma.captain.findUnique({ where: { id: ride.captainId }});
+    if (assignedCaptain) {
+      await redisClient.del(`ride_assignment:${assignedCaptain.userId}`);
+    }
   }
 
   const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
@@ -203,6 +227,11 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
     where: { id: captain.id },
     data: { status: CaptainStatus.ON_RIDE },
   });
+
+  // Cache assignment in Redis for real-time location validation
+  if (redisClient.isReady) {
+    await redisClient.set(`ride_assignment:${captainUserId}`, rideId);
+  }
 
   const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
 
@@ -372,6 +401,11 @@ export const completeRide = async (rideId: string, captainUserId: string) => {
     where: { id: captain.id },
     data: { status: CaptainStatus.AVAILABLE },
   });
+
+  // Clear Redis assignment cache
+  if (redisClient.isReady) {
+    await redisClient.del(`ride_assignment:${captainUserId}`);
+  }
 
   const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
 
