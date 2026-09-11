@@ -4,6 +4,13 @@ import { prisma } from '../src/config/db';
 import { RideStatus, Role } from '@prisma/client';
 import { generateAccessToken } from '../src/utils/crypto';
 
+jest.mock('../src/socket', () => ({
+  getIO: jest.fn().mockReturnValue({
+    to: jest.fn().mockReturnThis(),
+    emit: jest.fn(),
+  }),
+}));
+
 jest.mock('../src/config/db', () => ({
   prisma: {
     ride: {

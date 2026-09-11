@@ -4,12 +4,20 @@ import { connectDB, prisma } from './config/db';
 import { connectRedis, redisClient } from './config/redis';
 import { logger } from './utils/logger';
 import { createHttpTerminator } from 'http-terminator';
+import http from 'http';
+import { initializeSocket } from './socket';
 
 const startServer = async () => {
   await connectDB();
   await connectRedis();
 
-  const server = app.listen(env.PORT, () => {
+  // Create HTTP Server
+  const server = http.createServer(app);
+
+  // Initialize Socket.io
+  initializeSocket(server);
+
+  server.listen(env.PORT, () => {
     logger.info(`Server listening on port ${env.PORT} in ${env.NODE_ENV} mode`);
   });
 

@@ -1,6 +1,8 @@
 import { prisma } from '../config/db';
 import { AppError } from '../errors/AppError';
-import { RideStatus, Role } from '@prisma/client';
+import { RideStatus, Role, CaptainStatus } from '@prisma/client';
+import { getNearbyCaptains } from './matching.service';
+import { getIO } from '../socket';
 
 export const createRide = async (data: {
   riderId: string;
@@ -18,6 +20,51 @@ export const createRide = async (data: {
       status: RideStatus.SEARCHING,
     },
   });
+
+  // Start the matching flow
+  try {
+    const io = getIO();
+    const vehicleType = 'BIKE'; // Assuming BIKE for MVP
+    const radiusKm = 5; // Search radius
+    const nearbyCaptains = await getNearbyCaptains(ride.id, data.pickupLat, data.pickupLng, radiusKm, vehicleType);
+
+    if (nearbyCaptains.length > 0) {
+      console.log(`Found ${nearbyCaptains.length} eligible captains for ride ${ride.id}`);
+      nearbyCaptains.forEach((captain) => {
+        io.to(`captain:${captain.userId}`).emit('ride:new', {
+          rideId: ride.id,
+          pickup: { lat: data.pickupLat, lng: data.pickupLng },
+          destination: { lat: data.destinationLat, lng: data.destinationLng },
+          estimatedFare: data.estimatedFare,
+          estimatedDistanceM: data.estimatedDistanceM,
+        });
+      });
+    } else {
+      console.log(`No eligible captains found initially for ride ${ride.id}`);
+    }
+
+    // Set 2-minute fallback timeout
+    setTimeout(async () => {
+      const currentRide = await prisma.ride.findUnique({ where: { id: ride.id } });
+      if (currentRide && currentRide.status === RideStatus.SEARCHING) {
+        console.log(`Matching timeout reached for ride ${ride.id}. Cancelling ride.`);
+        await prisma.ride.update({
+          where: { id: ride.id },
+          data: {
+            status: RideStatus.CANCELLED,
+            cancellationReason: 'NO_CAPTAINS_AVAILABLE',
+            cancelledBy: 'SYSTEM',
+            cancelledAt: new Date(),
+          },
+        });
+        io.to(`ride:${ride.id}`).emit('ride:cancelled', { reason: 'NO_CAPTAINS_AVAILABLE' });
+      }
+    }, 2 * 60 * 1000);
+
+  } catch (err) {
+    console.error('Error during matching flow:', err);
+  }
+
   return ride;
 };
 
@@ -90,7 +137,16 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified by another request. Please try again.');
   }
 
-  return prisma.ride.findUnique({ where: { id: rideId } });
+  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+  
+  try {
+    const io = getIO();
+    io.to(`ride:${rideId}`).emit('ride:cancelled', { reason: reason || 'Cancelled by user' });
+  } catch (err) {
+    console.error('Socket broadcast error:', err);
+  }
+
+  return updatedRide;
 };
 
 // Additional transition functions
@@ -142,7 +198,22 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride was accepted by someone else or cancelled.');
   }
 
-  return prisma.ride.findUnique({ where: { id: rideId } });
+  // Update captain status to ON_RIDE
+  await prisma.captain.update({
+    where: { id: captain.id },
+    data: { status: CaptainStatus.ON_RIDE },
+  });
+
+  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+
+  try {
+    const io = getIO();
+    io.to(`ride:${rideId}`).emit('ride:captain_assigned', updatedRide);
+  } catch (err) {
+    console.error('Socket broadcast error:', err);
+  }
+
+  return updatedRide;
 };
 
 export const rejectRide = async (rideId: string, captainUserId: string) => {
@@ -205,7 +276,16 @@ export const markCaptainArrived = async (rideId: string, captainUserId: string) 
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified.');
   }
 
-  return prisma.ride.findUnique({ where: { id: rideId } });
+  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+
+  try {
+    const io = getIO();
+    io.to(`ride:${rideId}`).emit('ride:captain_arrived', updatedRide);
+  } catch (err) {
+    console.error('Socket broadcast error:', err);
+  }
+
+  return updatedRide;
 };
 
 export const startRide = async (rideId: string, captainUserId: string) => {
@@ -240,7 +320,16 @@ export const startRide = async (rideId: string, captainUserId: string) => {
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified.');
   }
 
-  return prisma.ride.findUnique({ where: { id: rideId } });
+  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+
+  try {
+    const io = getIO();
+    io.to(`ride:${rideId}`).emit('ride:started', updatedRide);
+  } catch (err) {
+    console.error('Socket broadcast error:', err);
+  }
+
+  return updatedRide;
 };
 
 export const completeRide = async (rideId: string, captainUserId: string) => {
@@ -278,5 +367,20 @@ export const completeRide = async (rideId: string, captainUserId: string) => {
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified.');
   }
 
-  return prisma.ride.findUnique({ where: { id: rideId } });
+  // Set captain back to AVAILABLE if they are still ON_RIDE
+  await prisma.captain.update({
+    where: { id: captain.id },
+    data: { status: CaptainStatus.AVAILABLE },
+  });
+
+  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+
+  try {
+    const io = getIO();
+    io.to(`ride:${rideId}`).emit('ride:completed', updatedRide);
+  } catch (err) {
+    console.error('Socket broadcast error:', err);
+  }
+
+  return updatedRide;
 };

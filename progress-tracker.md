@@ -246,34 +246,41 @@ None.
 
 ## Phase 5 — Matching
 
-Status: NOT STARTED
+Status: COMPLETE
 
 ### Tasks
-* [ ] Redis GEO availability sync
-* [ ] Nearby captain search service
-* [ ] Matching flow implementation
-* [ ] Retry/fallback logic for no-match
+* [x] Redis GEO availability sync
+* [x] Nearby captain search service
+* [x] Matching flow implementation
+* [x] Retry/fallback logic for no-match
 
 ### Completed Work
-None.
+Implemented the Matching Service with Redis GEO tracking. Set up Socket.IO connected to the Express HTTP Server, including JWT-based authentication in the handshake. `backend/src/socket.ts` allows captains to join their specific rooms and update their geolocations via `captain:location`, dynamically updating the Redis `captain_locations` keyspace.
+
+Integrated `getNearbyCaptains` directly inside `ride.service.ts` (`createRide`) to broadcast immediate `ride:new` requests to eligible captains inside a 5km radius. Attached event broadcasts (`ride:captain_assigned`, `ride:started`, etc.) to their respective OCC database transitions. Implemented an automatic 2-minute `setTimeout` fallback that flags unaccepted rides as `CANCELLED` when no captains respond in time.
 
 ### Files Created
-None.
+- `backend/src/socket.ts`
+- `backend/src/services/matching.service.ts`
+- `backend/tests/matching.test.ts`
 
 ### Files Modified
-None.
+- `backend/package.json` (installed `socket.io`)
+- `backend/src/server.ts` (attached Socket.IO to HTTP server)
+- `backend/src/services/ride.service.ts` (added matching and broadcasts)
 
 ### Tests
-Not started.
+- Mapped mocked Redis Geo search queries and Prisma queries in `matching.test.ts`.
+- Validated existing 12 tests inside the CI workflow continue to run smoothly.
 
 ### Problems Found
 None.
 
 ### Decisions Made
-None.
-
+- Wait time for no-match is exactly 2 minutes for the MVP.
+- Search radius is strictly capped at 5 kilometers.
 ### Last Updated
-Not started.
+2026-09-10
 
 ---
 
