@@ -348,7 +348,9 @@ Implemented Scheduled Rides using BullMQ. Added `POST /rides/schedule` endpoint.
 - `backend/src/server.ts`
 
 ### Tests
-Not started.
+- Created unit test for `POST /rides/schedule` endpoint in `ride.test.ts`.
+- Verified BullMQ queue enqueueing behavior.
+- Passed successfully.
 
 ### Problems Found
 None.
@@ -465,3 +467,134 @@ None.
 
 ### Last Updated
 Not started.
+
+---
+
+## Phase F0 — Backend Contract Audit
+
+Status: COMPLETE
+
+### Tasks
+* [x] Inspect all existing backend routes
+* [x] Inspect schemas/types
+* [x] Inspect auth
+* [x] Inspect ride state machine
+* [x] Inspect Socket.IO events
+* [x] Inspect scheduled ride behavior
+* [x] Document verified contracts
+
+### Completed Work
+Audited the backend codebase including Prisma schemas, Express routes, and Socket.IO events. Generated the definitive `frontend-backend-contract.md` to guide frontend development.
+
+### Files Created
+- `docs/frontend-backend-contract.md`
+
+### Last Updated
+2026-09-11
+
+---
+
+## Phase F1 — Frontend Foundation
+
+Status: NOT STARTED
+
+### Tasks
+* [ ] Initialize Next.js in TypeScript
+* [ ] Install modern UI dependencies (Framer Motion, Lenis scroll, Tailwind, etc.)
+* [ ] Configure lint/format
+* [ ] Set up routing
+* [ ] Set up providers
+* [ ] Set up TanStack query client
+* [ ] Set up API client
+* [ ] Set up error normalization
+* [ ] Define design tokens
+* [ ] Build base UI components
+* [ ] Add ErrorBoundary
+
+---
+
+## Phase F2 — Authentication (Frontend)
+
+Status: NOT STARTED
+
+### Tasks
+* [ ] Login page
+* [ ] Register page
+* [ ] Token refresh logic
+* [ ] Logout logic
+* [ ] Session bootstrap
+* [ ] Protected routes
+* [ ] Role-based routing
+
+---
+
+## Phase F3 — Rider Core
+
+Status: NOT STARTED
+
+### Tasks
+* [ ] Rider home
+* [ ] Booking & Fare estimate
+* [ ] Immediate ride creation
+* [ ] Ride status page
+* [ ] Cancellation
+* [ ] Ride history
+* [ ] Ride detail
+
+---
+
+## Phase F4 — Captain Core
+
+Status: NOT STARTED
+
+### Tasks
+* [ ] Captain dashboard
+* [ ] Online/offline toggle
+* [ ] Incoming ride request UI
+* [ ] Accept/reject flows
+* [ ] Arrived/Start/Complete flows
+* [ ] History
+
+---
+
+## Phase F5 — Realtime
+
+Status: NOT STARTED
+
+### Tasks
+* [ ] Socket.IO client setup
+* [ ] Socket authentication
+* [ ] Ride subscriptions
+* [ ] Captain location tracking
+* [ ] Rider live tracking UI
+* [ ] Reconnect/reconciliation logic
+* [ ] Stale connection UI
+
+---
+
+## Phase F6 — Scheduled Rides (Frontend)
+
+Status: NOT STARTED
+
+### Tasks
+* [ ] Scheduling form
+* [ ] Scheduled ride list
+* [ ] Detail page
+* [ ] Countdown/status
+* [ ] Transition into active matching
+
+---
+
+## Phase F7 — Hardening
+
+Status: NOT STARTED
+
+### Tasks
+* [ ] Responsive review
+* [ ] Accessibility check
+* [ ] Loading/error/empty/offline states
+* [ ] Unit/component/integration tests
+* [ ] E2E critical path
+* [ ] Performance review
+* [ ] Security review
+* [ ] Production build

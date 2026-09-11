@@ -29,6 +29,14 @@ jest.mock('../src/config/redis', () => ({
   }
 }));
 
+jest.mock('../src/jobs/rideQueue', () => ({
+  rideQueue: {
+    add: jest.fn(),
+  }
+}));
+
+import { rideQueue } from '../src/jobs/rideQueue';
+
 describe('Ride Endpoints', () => {
   let riderToken: string;
   let captainToken: string;
@@ -124,5 +132,38 @@ describe('Ride Endpoints', () => {
     expect(response.status).toBe(409); // Conflict, invalid state
     expect(response.body.error.message).toContain('Cannot cancel ride in status COMPLETED');
     expect(prisma.ride.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('POST /rides/schedule should create a SCHEDULED ride and enqueue job', async () => {
+    (prisma.ride.create as jest.Mock).mockResolvedValue({
+      id: 'ride-2',
+      riderId: 'rider-1',
+      status: RideStatus.SCHEDULED,
+    });
+
+    const futureDate = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour from now
+
+    const response = await request(app)
+      .post('/rides/schedule')
+      .send({
+        pickup: { lat: 12.9716, lng: 77.5946 },
+        destination: { lat: 12.9352, lng: 77.6245 },
+        vehicleType: 'BIKE',
+        scheduledAt: futureDate
+      })
+      .set('Authorization', `Bearer ${riderToken}`);
+
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.status).toBe(RideStatus.SCHEDULED);
+    
+    // Verify BullMQ was called
+    expect(rideQueue.add).toHaveBeenCalledWith(
+      'startMatching',
+      { rideId: 'ride-2' },
+      expect.objectContaining({
+        delay: expect.any(Number)
+      })
+    );
   });
 });
