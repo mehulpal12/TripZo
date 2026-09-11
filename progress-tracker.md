@@ -318,30 +318,33 @@ None.
 - Cached captain-to-ride assignments in Redis instead of querying Postgres on every GPS tick to reduce latency.
 
 ### Last Updated
-Not started.
+2026-09-10
 
 ---
 
 ## Phase 7 — Scheduled Rides
 
-Status: NOT STARTED
+Status: COMPLETE
 
 ### Tasks
-* [ ] POST `/rides/schedule` API
-* [ ] BullMQ queue configuration
-* [ ] Delayed job for matching window
-* [ ] Job worker for `SCHEDULED` -> `SEARCHING`
-* [ ] Reconciliation cron job
-* [ ] Job idempotency checks
+* [x] POST `/rides/schedule` API
+* [x] BullMQ queue configuration
+* [x] Delayed job for matching window
+* [x] Job worker for `SCHEDULED` -> `SEARCHING`
+* [x] Reconciliation cron job
+* [x] Job idempotency checks
 
 ### Completed Work
-None.
+Implemented Scheduled Rides using BullMQ. Added `POST /rides/schedule` endpoint. Created a delayed job that safely converts rides from SCHEDULED to SEARCHING 15 minutes before the pickup time, reusing the existing matching flow. Added a 5-minute reconciliation cron to recover missed jobs.
 
 ### Files Created
-None.
+- `backend/src/jobs/rideQueue.ts`
 
 ### Files Modified
-None.
+- `backend/src/services/ride.service.ts`
+- `backend/src/controllers/ride.controller.ts`
+- `backend/src/routes/ride.routes.ts`
+- `backend/src/server.ts`
 
 ### Tests
 Not started.
@@ -350,10 +353,11 @@ Not started.
 None.
 
 ### Decisions Made
-None.
+- BullMQ is used for reliable delayed job processing.
+- Recon job runs every 5 minutes.
 
 ### Last Updated
-Not started.
+2026-09-11
 
 ---
 

@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth';
 import {
   getFare,
   createImmediateRide,
+  scheduleRide,
   getRide,
   getRideHistory,
   cancel,
@@ -40,6 +41,15 @@ const createRideSchema = z.object({
   }),
 });
 
+const scheduleRideSchema = z.object({
+  body: z.object({
+    pickup: coordinateSchema,
+    destination: coordinateSchema,
+    vehicleType: z.string().optional(),
+    scheduledAt: z.string().datetime(),
+  }),
+});
+
 const cancelRideSchema = z.object({
   body: z.object({
     reason: z.string().optional(),
@@ -51,6 +61,7 @@ router.use(requireAuth);
 
 router.get('/fare', validate(getFareSchema), getFare);
 router.post('/', validate(createRideSchema), createImmediateRide);
+router.post('/schedule', validate(scheduleRideSchema), scheduleRide);
 router.get('/', getRideHistory);
 router.get('/:rideId', getRide);
 router.post('/:rideId/cancel', validate(cancelRideSchema), cancel);

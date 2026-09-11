@@ -6,6 +6,7 @@ import { logger } from './utils/logger';
 import { createHttpTerminator } from 'http-terminator';
 import http from 'http';
 import { initializeSocket } from './socket';
+import { initReconciliationJob, rideWorker } from './jobs/rideQueue';
 
 const startServer = async () => {
   await connectDB();
@@ -16,6 +17,11 @@ const startServer = async () => {
 
   // Initialize Socket.io
   initializeSocket(server);
+
+  // Start BullMQ Jobs
+  initReconciliationJob().catch((err) => {
+    logger.error('Failed to init reconciliation job', err);
+  });
 
   server.listen(env.PORT, () => {
     logger.info(`Server listening on port ${env.PORT} in ${env.NODE_ENV} mode`);
@@ -28,6 +34,9 @@ const startServer = async () => {
     try {
       await httpTerminator.terminate();
       logger.info('HTTP server closed');
+      
+      await rideWorker.close();
+      logger.info('BullMQ worker closed');
       
       await prisma.$disconnect();
       logger.info('PostgreSQL connection closed');

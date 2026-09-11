@@ -24,6 +24,46 @@ export const getFare = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
+import { createScheduledRide } from '../services/ride.service';
+
+export const scheduleRide = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const { pickup, destination, vehicleType, scheduledAt } = req.body;
+
+    if (!scheduledAt) {
+      return res.status(400).json({ success: false, message: 'scheduledAt is required' });
+    }
+
+    const fare = estimateFare(
+      pickup.lat,
+      pickup.lng,
+      destination.lat,
+      destination.lng,
+      vehicleType || 'BIKE'
+    );
+
+    const ride = await createScheduledRide({
+      riderId: userId,
+      pickupLat: pickup.lat,
+      pickupLng: pickup.lng,
+      destinationLat: destination.lat,
+      destinationLng: destination.lng,
+      estimatedDistanceM: fare.estimatedDistanceM,
+      estimatedDurationS: fare.estimatedDurationS,
+      estimatedFare: fare.estimatedFare,
+      scheduledAt: new Date(scheduledAt),
+    });
+
+    res.status(201).json({
+      success: true,
+      data: ride,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createImmediateRide = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.userId;
