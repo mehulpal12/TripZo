@@ -14,11 +14,27 @@ export default function CaptainPage() {
   // Initialize socket and simulator
   useCaptainSocket();
 
+  const handleOnlineToggle = async (checked: boolean) => {
+    if (!checked && activeRequest && !accepting) {
+      setActiveRequest(null);
+    }
+    
+    try {
+      if (checked) {
+        await captainService.setOnline();
+      } else {
+        await captainService.setOffline();
+      }
+      setOnline(checked);
+    } catch (error) {
+      console.error("Failed to toggle online status", error);
+    }
+  };
+
   // Timer for active request
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (activeRequest && !accepting) {
-      setCountdown(15);
       timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -61,7 +77,7 @@ export default function CaptainPage() {
           <div className="flex items-center gap-space-md">
             <button 
               className={`group relative flex items-center gap-space-md px-space-lg py-space-sm rounded-full ${isOnline ? 'bg-[#111111] border-[#111111] text-white' : 'bg-slate-200 border-slate-300 text-slate-500'} shadow-md transition-all border-2`}
-              onClick={() => setOnline(!isOnline)}
+              onClick={() => handleOnlineToggle(!isOnline)}
             >
               <div className="relative flex items-center justify-center w-6 h-6">
                 {isOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFD600] opacity-70"></span>}
@@ -257,7 +273,12 @@ export default function CaptainPage() {
                 <button 
                   className="py-3 px-4 rounded-xl bg-[#1E293B] hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-colors"
                   onClick={async () => {
-                     // TODO: ARRIVED logic
+                     try {
+                       const res = await captainService.updateRideStatus(activeRide.id, 'CAPTAIN_ARRIVED');
+                       setActiveRide(res.ride);
+                     } catch (err) {
+                       console.error(err);
+                     }
                   }}
                 >
                   Arrived at Pickup
@@ -265,11 +286,20 @@ export default function CaptainPage() {
                 <button 
                   className="py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-black text-sm transition-colors shadow-lg shadow-emerald-500/20"
                   onClick={async () => {
-                     await captainService.updateRideStatus(activeRide.id, 'COMPLETED');
-                     setActiveRide(null);
+                     try {
+                       if (activeRide.status === 'CAPTAIN_ARRIVED') {
+                         const res = await captainService.updateRideStatus(activeRide.id, 'IN_PROGRESS');
+                         setActiveRide(res.ride);
+                       } else if (activeRide.status === 'IN_PROGRESS') {
+                         await captainService.updateRideStatus(activeRide.id, 'COMPLETED');
+                         setActiveRide(null);
+                       }
+                     } catch (err) {
+                       console.error(err);
+                     }
                   }}
                 >
-                  Complete Trip
+                  {activeRide.status === 'CAPTAIN_ARRIVED' ? 'Start Trip' : 'Complete Trip'}
                 </button>
               </div>
             </div>

@@ -3,13 +3,17 @@ import { AppError } from '../errors/AppError';
 import { CaptainStatus } from '@prisma/client';
 
 export const setCaptainStatus = async (userId: string, status: CaptainStatus) => {
-  const captain = await prisma.captain.findUnique({
+  // Use upsert to auto-create the captain profile if it doesn't exist for this user
+  const captain = await prisma.captain.upsert({
     where: { userId },
+    update: {}, // Just to get the current profile and check status
+    create: {
+      userId,
+      status: CaptainStatus.OFFLINE,
+      vehicleType: 'BIKE',
+      vehicleNumber: `AUTO-${Math.floor(1000 + Math.random() * 9000)}`
+    }
   });
-
-  if (!captain) {
-    throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain profile not found');
-  }
 
   // Prevent changing status if ON_RIDE, unless specifically allowed by some admin override
   if (captain.status === CaptainStatus.ON_RIDE && status !== CaptainStatus.ON_RIDE) {

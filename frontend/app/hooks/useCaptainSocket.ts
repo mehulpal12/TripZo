@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 import { socketClient } from "@/lib/socket/socket.client";
 import { useCaptainStore } from "@/stores/captain.store";
 
-// Base location for captain (e.g. Connaught place approx)
-const BASE_LAT = 28.6304;
-const BASE_LNG = 77.2177;
+// Base location for captain (Near Delhi Center, within 5km of rider's default)
+const BASE_LAT = 28.7031;
+const BASE_LNG = 77.1030;
 
 export function useCaptainSocket() {
   const { isOnline, activeRide, setActiveRequest, setCaptainLocation } = useCaptainStore();
@@ -22,9 +22,17 @@ export function useCaptainSocket() {
     if (!socket) return;
 
     // Listen for new ride requests
-    socket.on("ride:new", (rideData) => {
+    socket.on("ride:new", (rideData: any) => {
       console.log("New ride request received:", rideData);
-      setActiveRequest(rideData);
+      // Map backend payload to frontend Ride interface
+      setActiveRequest({
+        id: rideData.rideId,
+        status: "SEARCHING",
+        pickup: rideData.pickup,
+        destination: rideData.destination,
+        vehicleType: "BIKE", // default assumption for now
+        fare: rideData.estimatedFare,
+      });
     });
 
     // Cleanup
@@ -66,10 +74,13 @@ export function useCaptainSocket() {
       const loc = { lat: locationRef.current.lat, lng: locationRef.current.lng };
       setCaptainLocation(loc);
 
-      if (socket?.connected) {
-        socket.emit("captain:location", {
-          latitude: loc.lat,
-          longitude: loc.lng
+      const currentSocket = socketClient.getSocket();
+      if (currentSocket?.connected) {
+        currentSocket.emit("captain:location", {
+          lat: loc.lat,
+          lng: loc.lng,
+          timestamp: Date.now(),
+          ...(activeRide && { rideId: activeRide.id }),
         });
       }
     }, 2000);

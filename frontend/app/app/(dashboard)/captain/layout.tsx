@@ -1,9 +1,11 @@
 import { ReactNode } from "react";
 import Link from "next/link";
+import { SocketConnectionStatus } from "@/components/ui/SocketConnectionStatus";
 
 export default function CaptainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="h-screen w-full flex flex-col bg-[#F8F9FA] font-sans overflow-hidden text-[#111111] selection:bg-[#FFD600] selection:text-black">
+      <SocketConnectionStatus />
       {/* Top Navigation Chrome: Crisp High-Contrast White with Sub-border */}
       <header className="h-[64px] shrink-0 w-full z-50 bg-white/95 backdrop-blur-xl border-b border-[#E2E8F0] shadow-sm">
         <div className="h-full w-full px-margin-desktop flex items-center justify-between gap-gutter-desktop">

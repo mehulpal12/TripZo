@@ -1,9 +1,11 @@
 import { ReactNode } from "react";
 import { User, Bell, Search, CircleDot } from "lucide-react";
+import { SocketConnectionStatus } from "@/components/ui/SocketConnectionStatus";
 
 export default function RiderLayout({ children }: { children: ReactNode }) {
   return (
     <div className="h-screen w-full flex flex-col bg-background font-sans overflow-hidden">
+      <SocketConnectionStatus />
       {/* Top Navigation Bar */}
       <header className="h-[72px] shrink-0 border-b border-border bg-card flex items-center justify-between px-6 z-50 shadow-sm">
         <div className="flex items-center gap-6">

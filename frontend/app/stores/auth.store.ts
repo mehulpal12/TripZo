@@ -20,8 +20,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   setAuth: (user, token, refreshToken) => {
-    Cookies.set("token", token, { expires: 7, secure: true, sameSite: "strict" });
-    Cookies.set("refreshToken", refreshToken, { expires: 30, secure: true, sameSite: "strict" });
+    Cookies.set("token", token, { expires: 7, sameSite: "strict" });
+    Cookies.set("refreshToken", refreshToken, { expires: 30, sameSite: "strict" });
     localStorage.setItem("user", JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },

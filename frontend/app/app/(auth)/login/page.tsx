@@ -60,6 +60,25 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          <div className="flex gap-4 mb-4">
+            <Button
+              type="button"
+              variant={formData.email === "rider@tripzo.com" ? "default" : "outline"}
+              className={`flex-1 rounded-full ${formData.email === "rider@tripzo.com" ? "shadow-[0_0_12px_rgba(0,242,254,0.2)]" : "bg-transparent text-foreground border-border"}`}
+              onClick={() => setFormData({...formData, email: "rider@tripzo.com", password: "password123"})}
+            >
+              Rider
+            </Button>
+            <Button
+              type="button"
+              variant={formData.email === "captain@tripzo.com" ? "default" : "outline"}
+              className={`flex-1 rounded-full ${formData.email === "captain@tripzo.com" ? "shadow-[0_0_12px_rgba(0,242,254,0.2)]" : "bg-transparent text-foreground border-border"}`}
+              onClick={() => setFormData({...formData, email: "captain@tripzo.com", password: "password123"})}
+            >
+              Captain
+            </Button>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input 

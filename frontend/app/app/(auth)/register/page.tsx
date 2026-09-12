@@ -62,7 +62,7 @@ export default function RegisterPage() {
               type="button"
               variant={formData.role === "RIDER" ? "default" : "outline"}
               className={`flex-1 rounded-full ${formData.role === "RIDER" ? "shadow-[0_0_12px_rgba(0,242,254,0.2)]" : "bg-transparent text-foreground border-border"}`}
-              onClick={() => setFormData({...formData, role: "RIDER"})}
+              onClick={() => setFormData({...formData, role: "RIDER", email: "rider@tripzo.com", name: "Test Rider"})}
             >
               Rider
             </Button>
@@ -70,7 +70,7 @@ export default function RegisterPage() {
               type="button"
               variant={formData.role === "CAPTAIN" ? "default" : "outline"}
               className={`flex-1 rounded-full ${formData.role === "CAPTAIN" ? "shadow-[0_0_12px_rgba(0,242,254,0.2)]" : "bg-transparent text-foreground border-border"}`}
-              onClick={() => setFormData({...formData, role: "CAPTAIN"})}
+              onClick={() => setFormData({...formData, role: "CAPTAIN", email: "captain@tripzo.com", name: "Test Captain"})}
             >
               Captain
             </Button>
