@@ -36,6 +36,30 @@ body {
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
+
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2rem;
+  --spacing-space-2xl: 3rem;
+  --spacing-margin: 1rem;
+  --spacing-margin-desktop: 2rem;
+  --spacing-gutter: 1rem;
+  --spacing-gutter-desktop: 1.5rem;
+
+  --font-body-sm: var(--font-sans);
+  --font-body-md: var(--font-sans);
+  --font-body-lg: var(--font-sans);
+  --font-headline-sm: var(--font-sans);
+  --font-headline-md: var(--font-sans);
+  --font-headline-xl: var(--font-sans);
+  --font-display-lg: var(--font-sans);
+  --font-label-sm: var(--font-sans);
+  --font-label-md: var(--font-sans);
+  --font-label-lg: var(--font-sans);
+  --font-telemetry-sm: var(--font-mono), monospace;
+  --font-telemetry-md: var(--font-mono), monospace;
 }
 
 :root {
