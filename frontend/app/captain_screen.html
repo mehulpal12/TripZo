@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          primary: "#705d00",
+          "primary-container": "#ffd600",
+          "on-primary-container": "#111111",
+          surface: "#f8f9fa",
+          "surface-low": "#f1f3f5",
+          "surface-lowest": "#ffffff",
+          "surface-dark": "#111111",
+          "surface-slate": "#1e293b",
+          "surface-slate-high": "#334155",
+          "on-surface": "#111111",
+          "on-surface-muted": "#64748b",
+          "border-subtle": "#e2e8f0",
+          "accent-yellow": "#ffd600",
+          "accent-green": "#10b981"
+        },
+        borderRadius: {
+          DEFAULT: "0.25rem",
+          lg: "0.5rem",
+          xl: "0.75rem",
+          full: "9999px"
+        },
+        spacing: {
+          "space-xs": "0.25rem",
+          "space-sm": "0.5rem",
+          "space-md": "1rem",
+          "space-lg": "1.5rem",
+          "space-xl": "2.5rem",
+          margin: "1rem",
+          "margin-desktop": "2.5rem",
+          gutter: "1rem",
+          "gutter-desktop": "1.5rem"
+        },
+        fontFamily: {
+          sans: ["Inter", "sans-serif"]
+        }
+      }
+    }
+  };
+</script></head><body class="bg-[#F8F9FA] font-sans text-[#111111] min-h-screen selection:bg-accent-yellow selection:text-black">
+<!-- Top Navigation Chrome: Crisp High-Contrast White with Sub-border -->
+<header class="fixed top-0 left-0 right-0 w-full z-50 bg-white/95 backdrop-blur-xl border-b border-[#E2E8F0] shadow-sm"><div class="h-16 w-full px-margin-desktop flex items-center justify-between gap-gutter-desktop"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-sm"><img alt="TRIPZO Vector Brandmark" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_0Hjeffs7sb_eJZnUyR9IXFi3qr8tzXT4CtPc2xFP66cg6l6U2tznZnxR7Z47Hf0TlXxnlQ16lAh_0dhCTHTkHe03Cmm4MoJy3F-ZCsmBn6menrRdqlPM4ne4KPQH1yQBLjV96ps6mWkZocKmfQRRn1DQNGK5lqh4CabseAM5sd_CO_sGnnWVxp2wVqH8DLyFWYqdT8q5ec9WsSNHDq2AfdZLj84kfsbyn71iTfsbD2BQQ_lDRPp3YQ"/><span class="font-extrabold text-xl text-[#111111] tracking-tight">TRIPZO</span></div><div class="hidden xl:flex items-center gap-space-xs px-3 py-1 rounded-full bg-[#F1F3F5] border border-slate-200"><span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span></span><span class="text-xs font-bold text-slate-700 uppercase tracking-wider">NEW DELHI · LIVE NETWORK</span></div></div><nav class="hidden md:flex items-center gap-1 p-1 bg-[#F1F3F5] rounded-full border border-slate-200"><a class="px-4 py-1.5 rounded-full text-xs font-semibold text-slate-600 hover:text-black hover:bg-white transition-all" data-path="book-ride" href="#">Book Ride</a><a class="px-4 py-1.5 rounded-full text-xs font-semibold text-slate-600 hover:text-black hover:bg-white transition-all" data-path="live-tracking" href="#">Live Tracking</a><a aria-current="page" class="px-4 py-1.5 text-xs font-bold transition-all bg-[#111111] text-accent-yellow rounded-full shadow-sm" data-path="captain-console" href="#">Captain Console</a><a class="px-4 py-1.5 rounded-full text-xs font-semibold text-slate-600 hover:text-black hover:bg-white transition-all" data-path="ride-history" href="#">Ride History</a><a class="px-4 py-1.5 rounded-full text-xs font-semibold text-slate-600 hover:text-black hover:bg-white transition-all" data-path="scheduled-trips" href="#">Scheduled Trips</a></nav><div class="flex items-center gap-space-md"><button class="hidden lg:flex items-center gap-space-sm px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-600 hover:border-slate-400 transition-all text-xs" type="button"><span class="material-symbols-outlined text-base">search</span><span class="font-medium">Search coordinate...</span><kbd class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-600">⌘K</kbd></button><div class="hidden sm:flex items-center gap-space-xs px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200"><span class="inline-block h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span><span class="text-xs font-bold text-emerald-800">SOCKET 99.98%</span></div><button aria-label="Notifications" class="flex items-center justify-center w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-all shadow-sm" type="button"><span class="material-symbols-outlined text-xl">notifications</span></button><div class="flex items-center gap-2 pl-1"><img alt="Captain Vikram" class="w-8 h-8 rounded-full object-cover ring-2 ring-accent-yellow shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCndGOIi0a22B7_DKFuZUxNujnHa7AH3y7XiSq2UpPGYe2HqIqzzbpTC6Wy7QjKqFaaZkDm1CJDXig5PjSuXfbHpGRGmYwAgyAfELxpUjzu-70a3e-OhOzLewzv_kJ-O_hEXHGAt2dH5k05w_pjwKMUyf_NAVxIkdLepxcfMgWwcAsT5-rMSyfFM3tHEVyf2Nx-Sq5df9nVKAG0Uf6R7X7sP4R92aC-z5eg7IGb7O2KSKMevSfgOJd-AA"/><div class="hidden xl:flex flex-col text-left"><span class="text-xs font-bold text-[#111111] leading-tight">Capt. Vikram</span><span class="text-[10px] text-slate-500 font-semibold">Tier-1 Elite Moto</span></div></div></div></div></header>
+<main class="w-full pt-16 bg-[#F8F9FA] min-h-screen">
+<div class="flex flex-col w-full">
+<!-- Captain Cockpit Sub-Bar / High-Visibility Telemetry (Off-White Canvas + Deep Charcoal Cards) -->
+<section class="w-full bg-white border-b border-[#E2E8F0] px-margin-desktop py-space-md shadow-sm z-20">
+<div class="max-w-[1680px] mx-auto flex flex-wrap items-center justify-between gap-space-md">
+<!-- Primary Status Toggle: High-Contrast Tactile Dark Capsule with High-Vis Signal -->
+<div class="flex items-center gap-space-md">
+<button class="group relative flex items-center gap-space-md px-space-lg py-space-sm rounded-full bg-[#111111] text-white shadow-md transition-all hover:bg-[#1E293B] border-2 border-[#111111]" id="captainStatusToggle">
+<div class="relative flex items-center justify-center w-6 h-6">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-yellow opacity-70"></span>
+<span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-accent-yellow shadow-[0_0_10px_#FFD600]"></span>
+</div>
+<div class="flex flex-col text-left">
+<span class="text-[10px] text-accent-yellow font-extrabold tracking-widest uppercase">Driver Cockpit Status</span>
+<span class="text-sm font-extrabold text-white tracking-tight">ONLINE · ACCEPTING RIDES</span>
+</div>
+<span class="material-symbols-outlined text-accent-yellow group-hover:translate-x-0.5 transition-transform text-xl">power_settings_new</span>
+</button>
+<div class="hidden 2xl:flex items-center gap-space-xs px-3 py-1.5 rounded-full bg-[#F1F3F5] border border-slate-200">
+<span class="material-symbols-outlined text-slate-600 text-sm">satellite_alt</span>
+<span class="text-xs font-semibold text-slate-600 uppercase">RTK-GPS: ±0.3m · 100Hz</span>
+</div>
+</div>
+<!-- Real-time Shift Telemetry: 30% Deep Charcoal & Dark Slate Container Blocks for Daytime Legibility -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-space-sm sm:gap-space-md items-center">
+<!-- Shift Revenue -->
+<div class="flex flex-col px-4 py-2 rounded-xl bg-[#111111] text-white shadow-sm border border-slate-800">
+<div class="flex items-center justify-between gap-space-xs">
+<span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Shift Revenue</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-accent-yellow text-black uppercase">Phase 8</span>
+</div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-xl font-black text-white">₹1,420</span>
+<span class="text-xs font-bold text-accent-yellow">+14% vs avg</span>
+</div>
+</div>
+<!-- Completed Trips -->
+<div class="flex flex-col px-4 py-2 rounded-xl bg-[#1E293B] text-white shadow-sm border border-slate-700">
+<span class="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Completed Trips</span>
+<div class="flex items-baseline gap-1.5">
+<span class="text-xl font-black text-white">9</span>
+<span class="text-xs font-semibold text-slate-300">/ 12 Target</span>
+</div>
+</div>
+<!-- Acceptance Rate -->
+<div class="flex flex-col px-4 py-2 rounded-xl bg-[#1E293B] text-white shadow-sm border border-slate-700">
+<span class="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Acceptance Metric</span>
+<div class="flex items-baseline gap-1.5">
+<span class="text-xl font-black text-emerald-400">98.2%</span>
+<span class="material-symbols-outlined text-emerald-400 text-xs">verified</span>
+</div>
+</div>
+<!-- Rating -->
+<div class="flex flex-col px-4 py-2 rounded-xl bg-[#111111] text-white shadow-sm border border-slate-800">
+<span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Captain Score</span>
+<div class="flex items-center gap-1.5">
+<span class="text-xl font-black text-accent-yellow">4.95</span>
+<div class="flex text-accent-yellow">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="text-xs font-medium text-slate-400">(1.2k)</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Cockpit Tactical Stage: High Visibility Split Layout -->
+<div class="w-full max-w-[1680px] mx-auto px-margin-desktop py-space-lg grid grid-cols-1 lg:grid-cols-12 gap-gutter-desktop items-start">
+<!-- LEFT PANEL: Dispatch Queue & Urgent Trip Card (lg:col-span-5) -->
+<div class="lg:col-span-5 flex flex-col gap-space-md w-full">
+<!-- Primary Urgent Dispatch Card: Deep Charcoal Container with Daylight Contrast (#111111 / #1E293B) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#111111] text-white p-space-lg shadow-xl border-2 border-slate-800 flex flex-col gap-space-md" id="urgentRequestCard">
+<!-- Subtle Luminous Glow Accent -->
+<div class="absolute -top-12 -right-12 w-40 h-40 bg-accent-yellow/15 rounded-full blur-2xl pointer-events-none"></div>
+<!-- Card Header with 10% Safety Yellow Countdown Radial Timer -->
+<div class="flex items-center justify-between gap-space-md relative z-10">
+<div class="flex items-center gap-space-sm">
+<div class="flex items-center justify-center w-9 h-9 rounded-xl bg-accent-yellow text-[#111111] shadow-md">
+<span class="material-symbols-outlined text-xl font-extrabold">bolt</span>
+</div>
+<div>
+<span class="text-[11px] font-extrabold text-accent-yellow uppercase tracking-widest block">Priority Dispatch Alert</span>
+<h2 class="text-lg font-black text-white tracking-tight">NEW RIDE REQUEST</h2>
+</div>
+</div>
+<!-- 10% Accent Urgent Countdown Timer (12s) -->
+<div class="relative w-12 h-12 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-accent-yellow transition-all duration-1000 ease-linear" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" id="countdownPath" stroke="currentColor" stroke-dasharray="100, 100" stroke-dashoffset="20" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<span class="absolute text-xs font-black text-accent-yellow" id="countdownText">12s</span>
+</div>
+</div>
+<!-- Category & High-Contrast Fare Strip -->
+<div class="flex items-center justify-between px-space-md py-3 rounded-xl bg-[#1E293B] border border-slate-700 relative z-10">
+<div class="flex items-center gap-space-sm">
+<div class="p-2 rounded-lg bg-black/40 text-accent-yellow border border-slate-700">
+<span class="material-symbols-outlined text-xl">two_wheeler</span>
+</div>
+<div>
+<span class="text-base font-extrabold text-white block">TRIPZO Moto</span>
+<span class="text-xs text-slate-300 font-medium">Fleet Sector · Rapid Express</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<div class="flex items-center gap-space-xs">
+<span class="text-2xl font-black text-white tracking-tight">₹148</span>
+</div>
+<!-- Safety Yellow Fare Badge -->
+<span class="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-0.5 rounded bg-accent-yellow text-black uppercase tracking-wide shadow-sm mt-0.5">
+<span class="material-symbols-outlined text-xs font-bold">bolt</span> Instant Settlement
+</span>
+</div>
+</div>
+<!-- Waypoint Trajectory Route Box -->
+<div class="flex flex-col gap-3 p-space-md rounded-xl bg-[#1E293B] border border-slate-700 relative z-10">
+<!-- Pickup Point -->
+<div class="flex items-start gap-space-md">
+<div class="flex flex-col items-center mt-1">
+<span class="w-3.5 h-3.5 rounded-full bg-accent-yellow ring-4 ring-accent-yellow/20"></span>
+<span class="w-0.5 h-10 bg-slate-600 my-0.5"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="text-xs font-bold text-accent-yellow uppercase tracking-wider">PICKUP · 1.2 km away</span>
+<span class="text-[11px] font-black px-2 py-0.5 rounded bg-black/50 text-white border border-slate-600">3 MINS ETA</span>
+</div>
+<p class="text-base font-bold text-white truncate">Connaught Place Metro Gate 4</p>
+<span class="text-xs text-slate-300 block">Outer Circle, Block B, Central Delhi</span>
+</div>
+</div>
+<!-- Dropoff Point -->
+<div class="flex items-start gap-space-md">
+<div class="flex flex-col items-center mt-1">
+<span class="w-3.5 h-3.5 rotate-45 bg-emerald-400 ring-4 ring-emerald-400/20"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">DESTINATION · 16.4 km</span>
+<span class="text-[11px] font-black px-2 py-0.5 rounded bg-black/50 text-white border border-slate-600">24 MINS TRIP</span>
+</div>
+<p class="text-base font-bold text-white truncate">Cyber City Building 10, DLF</p>
+<span class="text-xs text-slate-300 block">DLF Phase 2, Gurugram Corridor</span>
+</div>
+</div>
+</div>
+<!-- Rider Profile Strip -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-[#1E293B] border border-slate-700 relative z-10">
+<div class="flex items-center gap-space-sm min-w-0">
+<img alt="Portrait of rider Mehul S." class="w-10 h-10 rounded-full object-cover ring-2 ring-slate-600 flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxMbCCCaphHWmQ8ZoDKCbKg3PHxLFylmTLYk8b83qmMpV44elZ0WuxouEyT9IJaHYHZAVzY_5RrK0kVjkxpZ95WumYOUX2Ni6fRKvb0Xg9Yx6w8pqwdx4hziJXxwown-BXKuSMg12b_IVu-AB531KBUxfZ1O5oN2wMFIGX7CsndotuvHVE67JnoyqO4vmnYO2V2MhuyK6QbqsS9N3BLrcvxdaPqFDMTtW-OBtSlgDvpo5P5cIZTFW21A"/>
+<div class="min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="text-sm font-bold text-white truncate">Mehul S.</span>
+<span class="inline-flex items-center gap-0.5 text-xs font-bold text-accent-yellow">
+<span class="material-symbols-outlined text-xs" style="font-variation-settings: 'FILL' 1;">star</span> 4.9
+</span>
+</div>
+<span class="text-xs text-slate-400 block truncate">Regular Commuter · 142 trips</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="text-xs font-bold px-3 py-1 rounded-full bg-black/60 text-accent-yellow border border-slate-700">
+  PRE-PAID UPI
+</span>
+</div>
+</div>
+<!-- 10% Accent High-Visibility Action Buttons: Pass vs Safety Yellow Primary CTA -->
+<div class="grid grid-cols-3 gap-space-sm pt-1 relative z-10">
+<button class="col-span-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-xl bg-[#1E293B] hover:bg-slate-700 text-slate-200 border border-slate-600 transition-all active:scale-95 font-bold" id="declineRideBtn">
+<span class="material-symbols-outlined text-rose-400 text-lg">close</span>
+<span class="text-sm">Pass</span>
+</button>
+<!-- High-Visibility Safety Yellow CTA Button with Black Text for Rapid In-Cab Legibility -->
+<button class="col-span-2 relative group overflow-hidden flex items-center justify-center gap-2 py-3.5 px-space-lg rounded-xl bg-accent-yellow hover:bg-[#FACC15] text-[#111111] transition-all active:scale-98 shadow-lg shadow-yellow-500/20 font-black tracking-tight text-base" id="acceptRideBtn">
+<span class="material-symbols-outlined text-2xl font-black">electric_bolt</span>
+<span>ACCEPT RIDE</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform font-bold">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Upcoming Scheduled Ride Reservation Card (Daylight Canvas Off-White container) -->
+<div class="flex flex-col gap-space-sm p-space-md rounded-2xl bg-white border border-slate-200 shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-slate-700 text-base">event_upcoming</span>
+<span class="text-xs text-slate-700 font-extrabold uppercase tracking-wider">Scheduled Queue</span>
+</div>
+<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">1 UPCOMING</span>
+</div>
+<div class="p-space-md rounded-xl bg-[#F8F9FA] border border-slate-200 flex flex-col gap-1.5 transition-all hover:bg-slate-50 cursor-pointer">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-slate-700 text-sm">alarm</span>
+<span class="text-sm font-bold text-[#111111]">Today, 2:30 PM (Reservation)</span>
+</div>
+<span class="text-base font-extrabold text-[#111111]">₹490</span>
+</div>
+<p class="text-xs text-slate-700 font-medium truncate">Connaught Place Metro <span class="text-slate-400">➔</span> T3 IGI Airport Departure</p>
+<div class="flex items-center justify-between pt-1">
+<span class="text-[11px] text-slate-500 font-medium">Confirmed with Flight AI Sync #AI-902</span>
+<span class="text-xs font-bold text-[#111111] flex items-center gap-0.5 hover:underline">Details <span class="material-symbols-outlined text-xs">chevron_right</span></span>
+</div>
+</div>
+</div>
+<!-- Quick Vehicle & Hardware Telemetry: Clean White Cards with Slate Accents -->
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center gap-3 shadow-sm">
+<div class="p-2 rounded-lg bg-[#F1F3F5] text-slate-800">
+<span class="material-symbols-outlined text-xl font-bold">battery_charging_full</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-500 font-bold uppercase block">Battery Range</span>
+<span class="text-sm font-black text-[#111111]">84% · 118 km</span>
+</div>
+</div>
+<div class="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center gap-3 shadow-sm">
+<div class="p-2 rounded-lg bg-emerald-50 text-emerald-700">
+<span class="material-symbols-outlined text-xl font-bold">network_check</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-500 font-bold uppercase block">Mesh Latency</span>
+<span class="text-sm font-black text-emerald-700">18 ms · Strong</span>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT PANEL: Bright Daylight Navigation Map Viewport & Command Deck (lg:col-span-7) -->
+<div class="lg:col-span-7 flex flex-col gap-space-md w-full">
+<!-- Tactical Map Viewport Container -->
+<div class="relative w-full h-[640px] rounded-2xl overflow-hidden bg-white border-2 border-slate-200 shadow-xl flex flex-col justify-between p-space-md">
+<!-- Bright Daylight Google Maps Imagery Canvas -->
+<div class="absolute inset-0 w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjDqIERsFRSviA9ZV1F1tGQKzzYjWxrtHov-YRZzkPEg6lvfrSc9TrN2bDVdAbwWM1WGguMBgfPBUnHcMqVX3H1QR2rZC0uCvaVcQSBH8_2E4YBcniFKlPbYbme9jxvoKHRnaWED_zfOFjW_iTaecCb84KzJ_9OpzUi8NQ0w87q7uX3QZ-ZGUOaLzRNVeQAv2gdruJBIbuNh3OgsglDiOXI5dmAErzf2dP1NfSjz-rI9c44l-fjzOIXg');"></div>
+<!-- Soft daylight contrast filter ensuring crisp street readability -->
+<div class="absolute inset-0 bg-white/10 pointer-events-none"></div>
+<!-- SVG Overlaid High-Visibility Routing Trajectory: Safety Yellow & Cyan Vector -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-10" preserveaspectratio="none" viewbox="0 0 800 640">
+<defs>
+<lineargradient id="daylightRouteGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#FFD600" stop-opacity="1"></stop>
+<stop offset="35%" stop-color="#FFB703" stop-opacity="1"></stop>
+<stop offset="100%" stop-color="#0284C7" stop-opacity="1"></stop>
+</lineargradient>
+<filter height="150%" id="routeOutline" width="150%" x="-25%" y="-25%">
+<fedropshadow dx="0" dy="2" flood-color="#000000" flood-opacity="0.35" stddeviation="2"></fedropshadow>
+</filter>
+</defs>
+<!-- Captain Position to Pickup CP Gate 4 (High-contrast Yellow Dotted line) -->
+<path d="M 220 280 L 290 220" fill="none" stroke="#111111" stroke-dasharray="6,4" stroke-width="4"></path>
+<!-- Outer High-Contrast Border for Route Trajectory -->
+<path d="M 290 220 C 360 260, 410 390, 520 440 S 660 520, 710 570" fill="none" filter="url(#routeOutline)" stroke="#111111" stroke-linecap="round" stroke-linejoin="round" stroke-width="9"></path>
+<!-- High-Vis Core Vector -->
+<path d="M 290 220 C 360 260, 410 390, 520 440 S 660 520, 710 570" fill="none" stroke="url(#daylightRouteGradient)" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"></path>
+<!-- Surge Heatmap Highlight Zones (Connaught Place & Cyber City) -->
+<circle cx="290" cy="220" fill="#FFD600" fill-opacity="0.25" r="55"></circle>
+<circle cx="290" cy="220" fill="#FFD600" fill-opacity="0.4" r="24"></circle>
+<circle cx="710" cy="570" fill="#0284C7" fill-opacity="0.22" r="75"></circle>
+<circle cx="710" cy="570" fill="#0284C7" fill-opacity="0.35" r="35"></circle>
+</svg>
+<!-- Dynamic Waypoint Pin HUD Layer Floating on Daylight Map -->
+<!-- 1. Captain Vikram Location Marker -->
+<div class="absolute z-20 left-[215px] top-[275px] -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+<div class="relative flex items-center justify-center">
+<span class="animate-ping absolute w-9 h-9 rounded-full bg-accent-yellow opacity-75"></span>
+<div class="w-8 h-8 rounded-full bg-[#111111] text-accent-yellow border-2 border-white flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-base font-black">navigation</span>
+</div>
+<span class="absolute top-9 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#111111] text-accent-yellow font-extrabold text-[11px] whitespace-nowrap shadow-md border border-slate-700">
+  YOU (Capt. Vikram)
+</span>
+</div>
+</div>
+<!-- 2. Pickup Pin at Connaught Place Gate 4 -->
+<div class="absolute z-20 left-[295px] top-[215px] -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#111111] text-white border border-slate-700 shadow-xl">
+<span class="w-3 h-3 rounded-full bg-accent-yellow shadow-[0_0_6px_#FFD600]"></span>
+<span class="text-xs font-black tracking-tight">PICKUP: CP Gate 4</span>
+</div>
+</div>
+<!-- 3. Destination Pin at DLF Cyber City B10 -->
+<div class="absolute z-20 left-[705px] top-[565px] -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#111111] text-white border border-slate-700 shadow-xl">
+<span class="w-3 h-3 rotate-45 bg-emerald-400 shadow-[0_0_6px_#34D399]"></span>
+<span class="text-xs font-black tracking-tight">DROP: Cyber City B10</span>
+</div>
+</div>
+<!-- Map Top Floating HUD: Surge Demand Chip & Layer Toggles -->
+<div class="relative z-20 flex flex-wrap items-center justify-between gap-space-md">
+<!-- Active Route Surge Metric: 10% Yellow Accent -->
+<div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#111111] text-white shadow-lg border border-slate-700">
+<span class="inline-block w-2.5 h-2.5 rounded-full bg-accent-yellow animate-ping"></span>
+<span class="text-xs font-black text-accent-yellow">HIGH SURGE DEMAND (+1.3x)</span>
+<span class="text-xs text-slate-300 font-medium">· DLF &amp; Outer Ring</span>
+</div>
+<!-- Map Layer Toggles in 30% Dark Slate Container -->
+<div class="flex items-center gap-1 p-1 rounded-full bg-[#111111]/90 backdrop-blur-md shadow-lg border border-slate-700 text-white">
+<button class="flex items-center gap-1 px-3 py-1 rounded-full bg-accent-yellow text-black font-extrabold text-xs transition-all shadow-sm" id="toggleHeatmapBtn">
+<span class="material-symbols-outlined text-xs font-black">local_fire_department</span>
+<span>Surge Heatmap: ON</span>
+</button>
+<button aria-label="Layers" class="p-1.5 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">layers</span>
+</button>
+<button aria-label="Traffic" class="p-1.5 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">traffic</span>
+</button>
+</div>
+</div>
+<!-- Map Bottom Floating Navigation Command Deck: 30% Dark Slate Bar (#1E293B) -->
+<div class="relative z-20 flex flex-wrap items-center justify-between gap-space-md p-space-sm rounded-xl bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 shadow-2xl">
+<!-- Turn-by-Turn Navigation Control & Rider Contact -->
+<div class="flex items-center gap-space-sm">
+<a class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent-yellow text-[#111111] hover:bg-[#FACC15] transition-all font-black text-xs shadow-md" href="https://maps.google.com" target="_blank">
+<span class="material-symbols-outlined text-base font-black">directions</span>
+<span>Google Maps Turn-by-Turn</span>
+</a>
+<button class="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition-all text-xs font-bold border border-slate-700">
+<span class="material-symbols-outlined text-emerald-400 text-base">call</span>
+<span>Rider Contact</span>
+</button>
+</div>
+<!-- Quick SOS & Offline Shift Button -->
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-800 text-rose-400 hover:bg-rose-950 border border-slate-700 transition-all shadow-sm" title="Safety Dispatch SOS">
+<span class="material-symbols-outlined text-lg">shield</span>
+</button>
+<button class="flex items-center gap-1 px-3 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-rose-400 hover:bg-slate-700 transition-all text-xs font-extrabold uppercase border border-slate-700" id="offlineToggleBtn">
+<span class="material-symbols-outlined text-sm">pause_circle</span>
+Go Offline
+</button>
+</div>
+</div>
+</div>
+<!-- Operational Fleet Health Status: Daytime Off-White / Pure White Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<div class="p-space-md rounded-2xl bg-white border border-slate-200 flex items-start gap-space-sm shadow-sm">
+<div class="p-2.5 rounded-xl bg-[#111111] text-accent-yellow shadow-sm">
+<span class="material-symbols-outlined text-xl">speed</span>
+</div>
+<div>
+<span class="text-[11px] font-bold text-slate-500 uppercase block">Speed Telemetry</span>
+<span class="text-lg font-black text-[#111111]">42 km/h</span>
+<span class="text-xs font-semibold text-emerald-600 block">Within City Limits</span>
+</div>
+</div>
+<div class="p-space-md rounded-2xl bg-white border border-slate-200 flex items-start gap-space-sm shadow-sm">
+<div class="p-2.5 rounded-xl bg-accent-yellow text-[#111111] shadow-sm">
+<span class="material-symbols-outlined text-xl font-bold">payments</span>
+</div>
+<div>
+<span class="text-[11px] font-bold text-slate-500 uppercase block">Weekly Payout Status</span>
+<span class="text-lg font-black text-[#111111]">₹11,480</span>
+<span class="text-xs font-medium text-slate-500 block">Auto-transfer on Monday</span>
+</div>
+</div>
+<div class="p-space-md rounded-2xl bg-white border border-slate-200 flex items-start gap-space-sm shadow-sm">
+<div class="p-2.5 rounded-xl bg-emerald-100 text-emerald-800 shadow-sm">
+<span class="material-symbols-outlined text-xl font-bold">verified_user</span>
+</div>
+<div>
+<span class="text-[11px] font-bold text-slate-500 uppercase block">Safety Shield</span>
+<span class="text-lg font-black text-emerald-700">ACTIVE</span>
+<span class="text-xs font-medium text-slate-500 block">Delhi Police Telematics Sync</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Interactive JavaScript Handling Dispatch Micro-Interactions -->
+<script>
+    (function initCaptainConsole() {
+      let secondsLeft = 12;
+      const totalSeconds = 15;
+      const countdownText = document.getElementById('countdownText');
+      const countdownPath = document.getElementById('countdownPath');
+      const urgentRequestCard = document.getElementById('urgentRequestCard');
+      const acceptBtn = document.getElementById('acceptRideBtn');
+      const declineBtn = document.getElementById('declineRideBtn');
+      const toggleHeatmapBtn = document.getElementById('toggleHeatmapBtn');
+      const statusToggle = document.getElementById('captainStatusToggle');
+
+      const timerInterval = setInterval(() => {
+        if (secondsLeft > 0) {
+          secondsLeft -= 1;
+          if (countdownText) countdownText.textContent = secondsLeft + 's';
+          if (countdownPath) {
+            const offset = (secondsLeft / totalSeconds) * 100;
+            countdownPath.style.strokeDashoffset = (100 - offset).toString();
+          }
+        } else {
+          clearInterval(timerInterval);
+          if (countdownText) countdownText.textContent = '0s';
+        }
+      }, 1000);
+
+      // Handle Acceptance with High-Visibility Yellow Confirmation
+      if (acceptBtn) {
+        acceptBtn.addEventListener('click', () => {
+          clearInterval(timerInterval);
+          acceptBtn.innerHTML = `
+            <span class="material-symbols-outlined text-xl animate-spin">sync</span>
+            <span class="font-black">LOCKING ROUTE...</span>
+          `;
+          setTimeout(() => {
+            urgentRequestCard.classList.add('ring-4', 'ring-[#FFD600]');
+            acceptBtn.className = "col-span-3 py-3.5 px-space-lg rounded-xl bg-accent-yellow text-black flex items-center justify-center gap-2 font-black shadow-xl";
+            acceptBtn.innerHTML = `
+              <span class="material-symbols-outlined text-2xl font-black">check_circle</span>
+              <span class="text-base font-black">ACCEPTED · NAVIGATING TO CP GATE 4</span>
+            `;
+            if (declineBtn) declineBtn.style.display = 'none';
+          }, 700);
+        });
+      }
+
+      // Handle Decline / Pass
+      if (declineBtn) {
+        declineBtn.addEventListener('click', () => {
+          clearInterval(timerInterval);
+          urgentRequestCard.style.opacity = '0.3';
+          urgentRequestCard.style.pointerEvents = 'none';
+          setTimeout(() => {
+            urgentRequestCard.innerHTML = `
+              <div class="flex flex-col items-center justify-center py-space-xl text-center gap-space-sm text-white">
+                <span class="material-symbols-outlined text-4xl text-accent-yellow">radar</span>
+                <span class="text-lg font-bold text-white">Searching next nearby ride...</span>
+                <span class="text-xs text-slate-300">Capt. Vikram remains on Priority Dispatch Queue</span>
+              </div>
+            `;
+            urgentRequestCard.style.opacity = '1';
+            urgentRequestCard.style.pointerEvents = 'auto';
+          }, 400);
+        });
+      }
+
+      // Toggle Heatmap Button
+      let heatmapActive = true;
+      if (toggleHeatmapBtn) {
+        toggleHeatmapBtn.addEventListener('click', () => {
+          heatmapActive = !heatmapActive;
+          if (heatmapActive) {
+            toggleHeatmapBtn.innerHTML = `<span class="material-symbols-outlined text-xs font-black">local_fire_department</span><span>Surge Heatmap: ON</span>`;
+            toggleHeatmapBtn.className = "flex items-center gap-1 px-3 py-1 rounded-full bg-accent-yellow text-black font-extrabold text-xs transition-all shadow-sm";
+          } else {
+            toggleHeatmapBtn.innerHTML = `<span class="material-symbols-outlined text-xs font-black">local_fire_department</span><span>Surge Heatmap: OFF</span>`;
+            toggleHeatmapBtn.className = "flex items-center gap-1 px-3 py-1 rounded-full bg-slate-800 text-slate-300 font-extrabold text-xs transition-all";
+          }
+        });
+      }
+
+      // Status Toggle Feedback
+      if (statusToggle) {
+        statusToggle.addEventListener('click', () => {
+          statusToggle.classList.toggle('opacity-75');
+        });
+      }
+    })();
+  </script>
+</div>
+</main>
+<!-- High-Contrast Clean Footer -->
+<footer class="w-full bg-white border-t border-[#E2E8F0] py-space-xl shadow-sm"><div class="w-full px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-space-md text-slate-600"><div class="flex items-center gap-space-md"><span class="font-extrabold text-lg text-[#111111]">TRIPZO</span><span class="text-xs font-medium text-slate-500">Autonomous Urban Mobility Operations Cockpit © 2025</span></div><div class="flex items-center gap-space-lg text-xs font-bold"><a class="text-slate-700 hover:text-black transition-colors" href="#">Telematics Protocol</a><a class="text-slate-700 hover:text-black transition-colors" href="#">Fleet Operations</a><a class="text-slate-700 hover:text-black transition-colors" href="#">Safety Dispatch</a><a class="text-slate-700 hover:text-black transition-colors" href="#">System Status</a></div></div></footer>
+</body></html>
