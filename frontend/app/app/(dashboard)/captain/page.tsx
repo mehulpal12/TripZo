@@ -14,7 +14,27 @@ export default function CaptainPage() {
   // Initialize socket and simulator
   useCaptainSocket();
 
+  // Restore state on load
+  useEffect(() => {
+    let isMounted = true;
+    captainService.getCurrentState().then((state) => {
+      if (isMounted) {
+        if (state.activeRide) {
+          setActiveRide(state.activeRide);
+          setOnline(true);
+        }
+      }
+    });
+    return () => { isMounted = false; };
+  }, [setActiveRide, setOnline]);
+
   const handleOnlineToggle = async (checked: boolean) => {
+    // Guard: never allow toggling while an active ride is in progress
+    if (activeRide) {
+      alert("You cannot go offline while on an active ride. Please complete or cancel the ride first.");
+      return;
+    }
+    
     if (!checked && activeRequest && !accepting) {
       setActiveRequest(null);
     }
@@ -26,8 +46,17 @@ export default function CaptainPage() {
         await captainService.setOffline();
       }
       setOnline(checked);
-    } catch (error) {
-      console.error("Failed to toggle online status", error);
+    } catch (error: any) {
+      // Revert the toggle UI state to match the actual backend state
+      setOnline(!checked);
+      const message = error?.response?.data?.message || error.message || "Failed to change status";
+      console.error("Failed to toggle online status", message);
+      // Show user-friendly feedback
+      if (message.includes("on a ride")) {
+        alert("Cannot go offline: you are currently on an active ride. Complete or cancel the ride first.");
+      } else {
+        alert(`Status change failed: ${message}`);
+      }
     }
   };
 
@@ -64,8 +93,15 @@ export default function CaptainPage() {
     }
   };
 
-  const handleDecline = () => {
-    setActiveRequest(null);
+  const handleDecline = async () => {
+    if (!activeRequest) return;
+    const rideId = activeRequest.id;
+    setActiveRequest(null); // dismiss UI immediately
+    try {
+      await captainService.rejectRide(rideId);
+    } catch (error) {
+      console.error("Failed to record ride rejection", error);
+    }
   };
 
   return (
@@ -76,8 +112,9 @@ export default function CaptainPage() {
           {/* Primary Status Toggle */}
           <div className="flex items-center gap-space-md">
             <button 
-              className={`group relative flex items-center gap-space-md px-space-lg py-space-sm rounded-full ${isOnline ? 'bg-[#111111] border-[#111111] text-white' : 'bg-slate-200 border-slate-300 text-slate-500'} shadow-md transition-all border-2`}
+              className={`group relative flex items-center gap-space-md px-space-lg py-space-sm rounded-full ${isOnline ? 'bg-[#111111] border-[#111111] text-white' : 'bg-slate-200 border-slate-300 text-slate-500'} shadow-md transition-all border-2 ${activeRide ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => handleOnlineToggle(!isOnline)}
+              disabled={!!activeRide}
             >
               <div className="relative flex items-center justify-center w-6 h-6">
                 {isOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFD600] opacity-70"></span>}
@@ -139,7 +176,7 @@ export default function CaptainPage() {
       <div className="w-full max-w-[1680px] mx-auto px-margin-desktop py-space-lg grid grid-cols-1 lg:grid-cols-12 gap-gutter-desktop items-start flex-1 min-h-0">
         
         {/* LEFT PANEL */}
-        <div className="lg:col-span-5 flex flex-col gap-space-md w-full h-full overflow-y-auto pb-10 custom-scrollbar pr-2">
+        <div className="order-2 lg:order-1 lg:col-span-5 flex flex-col gap-space-md w-full h-full overflow-y-auto pb-10 custom-scrollbar pr-0 lg:pr-2">
           
           {/* Active Request Overlay */}
           {activeRequest && !activeRide && (
@@ -354,7 +391,7 @@ export default function CaptainPage() {
         </div>
 
         {/* RIGHT PANEL: Bright Daylight Navigation Map Viewport */}
-        <div className="lg:col-span-7 flex flex-col gap-space-md w-full h-full">
+        <div className="order-1 lg:order-2 lg:col-span-7 flex flex-col gap-space-md w-full h-full">
           <CaptainMapContainer />
           
           {/* Operational Fleet Health Status */}

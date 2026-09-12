@@ -113,13 +113,31 @@ export const initializeSocket = (httpServer: HttpServer) => {
       }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
       console.log(`Socket disconnected: ${socket.id} (User: ${user.userId})`);
-      // If captain disconnects, we should ideally remove them from GEO or mark them offline.
+      // If captain disconnects, remove from GEO and reset DB status to OFFLINE
       if (user.role === 'CAPTAIN') {
-         if (redisClient.isReady) {
-            redisClient.zRem('captain_locations', user.userId).catch(console.error);
-         }
+        // Clean up Redis GEO
+        if (redisClient.isReady) {
+          Promise.all([
+            redisClient.zRem('captain_locations', user.userId),
+            redisClient.hDel('captain_location_meta', user.userId)
+          ]).catch(console.error);
+        }
+        // Reset DB status to OFFLINE so captain doesn't appear available when gone
+        try {
+          const { prisma } = await import('./config/db');
+          const { CaptainStatus } = await import('@prisma/client');
+          await prisma.captain.updateMany({
+            where: {
+              userId: user.userId,
+              status: { in: [CaptainStatus.AVAILABLE] }, // Only reset if not ON_RIDE
+            },
+            data: { status: CaptainStatus.OFFLINE },
+          });
+        } catch (err) {
+          console.error('Failed to reset captain status on disconnect:', err);
+        }
       }
     });
   });

@@ -25,7 +25,7 @@ export function RideControls() {
         res = await captainService.updateRideStatus(activeRide.id, 'COMPLETED');
       }
       
-      const updatedRide = res?.ride || res?.data;
+      const updatedRide = res?.ride || (res as any)?.data;
       if (updatedRide) {
         if (action === 'complete') {
           setActiveRide(null); // Clear ride when done
@@ -49,7 +49,7 @@ export function RideControls() {
               Ride Status: {activeRide.status.replace(/_/g, ' ')}
             </h3>
             <p className="text-sm text-muted-foreground">
-              Rider ID: {activeRide.riderId.substring(0, 8)}...
+              Rider ID: {activeRide.riderId?.substring(0, 8) || 'Unknown'}...
             </p>
           </div>
           

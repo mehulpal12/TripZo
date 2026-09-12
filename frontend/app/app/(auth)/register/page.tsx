@@ -22,7 +22,7 @@ export default function RegisterPage() {
     email: "rider@tripzo.com",
     password: "password123",
     role: "RIDER",
-    phone: "1234567890",
+    phone: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

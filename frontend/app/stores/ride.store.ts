@@ -10,7 +10,22 @@ export interface Ride {
   destination: LocationData;
   vehicleType: "BIKE" | "AUTO" | "CAB";
   fare: number;
+  riderId?: string;
   captainId?: string;
+  captain?: {
+    id: string;
+    vehicleType: string;
+    vehicleModel: string;
+    vehicleNumber: string;
+    rating: number;
+    totalTrips: number;
+    user: {
+      firstName: string;
+      lastName: string;
+      phone: string;
+      profilePicture?: string | null;
+    }
+  };
   captainLocation?: { lat: number; lng: number };
 }
 

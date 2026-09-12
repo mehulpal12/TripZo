@@ -96,23 +96,17 @@ export const startMatchingForRide = async (
       console.log(`No eligible captains found initially for ride ${rideId}`);
     }
 
-    // Set 2-minute fallback timeout
-    setTimeout(async () => {
-      const currentRide = await prisma.ride.findUnique({ where: { id: rideId } });
-      if (currentRide && currentRide.status === RideStatus.SEARCHING) {
-        console.log(`Matching timeout reached for ride ${rideId}. Cancelling ride.`);
-        await prisma.ride.update({
-          where: { id: rideId },
-          data: {
-            status: RideStatus.CANCELLED,
-            cancellationReason: 'NO_CAPTAINS_AVAILABLE',
-            cancelledBy: 'SYSTEM',
-            cancelledAt: new Date(),
-          },
-        });
-        io.to(`ride:${rideId}`).emit('ride:cancelled', { reason: 'NO_CAPTAINS_AVAILABLE' });
+    // Schedule a durable 2-minute fallback via BullMQ (survives server restarts)
+    const { rideQueue } = await import('../jobs/rideQueue');
+    await rideQueue.add(
+      'cancelIfNoAssignment',
+      { rideId },
+      {
+        delay: 2 * 60 * 1000,
+        jobId: `cancel-timeout-${rideId}`, // Idempotent: won't add duplicate if already scheduled
       }
-    }, 2 * 60 * 1000);
+    );
+
 
   } catch (err) {
     console.error('Error during matching flow:', err);
@@ -203,11 +197,20 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified by another request. Please try again.');
   }
 
-  // Clear Redis assignment cache if assigned
-  if (redisClient.isReady && ride.captainId) {
+  // Clear Redis assignment cache and reset captain status if assigned
+  if (ride.captainId) {
     const assignedCaptain = await prisma.captain.findUnique({ where: { id: ride.captainId }});
     if (assignedCaptain) {
-      await redisClient.del(`ride_assignment:${assignedCaptain.userId}`);
+      // Reset captain status from ON_RIDE/AVAILABLE back to AVAILABLE so they can toggle offline
+      if (assignedCaptain.status === CaptainStatus.ON_RIDE || assignedCaptain.status === CaptainStatus.AVAILABLE) {
+        await prisma.captain.update({
+          where: { id: ride.captainId },
+          data: { status: CaptainStatus.AVAILABLE },
+        });
+      }
+      if (redisClient.isReady) {
+        await redisClient.del(`ride_assignment:${assignedCaptain.userId}`);
+      }
     }
   }
 
@@ -238,6 +241,11 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
 
   if (ride.status !== RideStatus.SEARCHING) {
     throw new AppError('INVALID_STATE', 409, 'Ride is no longer searching for a captain');
+  }
+
+  // Ensure the captain is actually available (not on another ride)
+  if (captain.status !== CaptainStatus.AVAILABLE) {
+    throw new AppError('INVALID_STATE', 409, `Captain is not available (current status: ${captain.status})`);
   }
 
   // Check if this captain previously rejected this ride
@@ -278,16 +286,37 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
     data: { status: CaptainStatus.ON_RIDE },
   });
 
-  // Cache assignment in Redis for real-time location validation
+  // Cache assignment in Redis for real-time location validation (24h TTL)
   if (redisClient.isReady) {
-    await redisClient.set(`ride_assignment:${captainUserId}`, rideId);
+    await redisClient.set(`ride_assignment:${captainUserId}`, rideId, {
+      EX: 86400 // 24 hours
+    });
   }
 
-  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+  const updatedRide = await prisma.ride.findUnique({ 
+    where: { id: rideId },
+    include: {
+      captain: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              phone: true,
+            }
+          }
+        }
+      }
+    }
+  });
 
   try {
     const io = getIO();
+    // Emit to the ride room (for any listeners already joined)
     io.to(`ride:${rideId}`).emit('ride:captain_assigned', updatedRide);
+    // Also emit directly to the rider's personal room to avoid the join_ride timing race
+    if (updatedRide?.riderId) {
+      io.to(`rider:${updatedRide.riderId}`).emit('ride:captain_assigned', updatedRide);
+    }
   } catch (err) {
     console.error('Socket broadcast error:', err);
   }
@@ -320,6 +349,20 @@ export const rejectRide = async (rideId: string, captainUserId: string) => {
     },
     update: {}
   });
+
+  // Re-broadcast to other eligible captains (the rejection filter will exclude this captain)
+  // Only re-broadcast if the ride is still SEARCHING
+  if (ride.status === RideStatus.SEARCHING) {
+    startMatchingForRide(
+      rideId,
+      ride.pickupLat,
+      ride.pickupLng,
+      ride.destinationLat,
+      ride.destinationLng,
+      ride.estimatedFare,
+      ride.estimatedDistanceM,
+    ).catch(err => console.error('Re-broadcast after rejection failed:', err));
+  }
 
   return { success: true };
 };

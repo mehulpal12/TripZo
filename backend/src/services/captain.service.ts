@@ -2,6 +2,8 @@ import { prisma } from '../config/db';
 import { AppError } from '../errors/AppError';
 import { CaptainStatus } from '@prisma/client';
 
+import { redisClient } from '../config/redis';
+
 export const setCaptainStatus = async (userId: string, status: CaptainStatus) => {
   // Use upsert to auto-create the captain profile if it doesn't exist for this user
   const captain = await prisma.captain.upsert({
@@ -24,6 +26,14 @@ export const setCaptainStatus = async (userId: string, status: CaptainStatus) =>
     where: { userId },
     data: { status },
   });
+
+  // Explicitly clean up Redis if going offline
+  if (status === CaptainStatus.OFFLINE && redisClient.isReady) {
+    await Promise.all([
+      redisClient.zRem('captain_locations', userId),
+      redisClient.hDel('captain_location_meta', userId)
+    ]).catch(err => console.error("Failed to clean up captain from Redis on OFFLINE:", err));
+  }
 
   return updatedCaptain;
 };

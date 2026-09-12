@@ -22,7 +22,8 @@ export function ActiveRideSidebar() {
             </span>
             <span className="font-telemetry-sm text-xs text-[#FFD600] tracking-wider uppercase font-extrabold" id="trip-status-pill">
               {activeRide.status === "SEARCHING" ? "Searching Network" : 
-               activeRide.status === "CAPTAIN_ARRIVING" ? "Captain Arriving" : 
+               (activeRide.status === "CAPTAIN_ASSIGNED" || activeRide.status === "CAPTAIN_ARRIVING") ? "Captain Arriving" : 
+               activeRide.status === "CAPTAIN_ARRIVED" ? "Captain Arrived" :
                "Ride In Progress · On Time"}
             </span>
           </div>
@@ -76,20 +77,28 @@ export function ActiveRideSidebar() {
           <div className="p-space-lg rounded-xl bg-[#111111] text-white border border-gray-800 flex flex-col gap-space-md shadow-md">
             <div className="flex items-center gap-space-md">
               <div className="relative">
-                <img className="w-14 h-14 rounded-full object-cover shadow-md ring-2 ring-[#FFD600]" src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Captain Avatar" />
+                <img 
+                  className="w-14 h-14 rounded-full object-cover shadow-md ring-2 ring-[#FFD600] bg-slate-800" 
+                  src={activeRide.captain?.user?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeRide.captain?.user ? `${activeRide.captain.user.firstName} ${activeRide.captain.user.lastName}` : 'Captain')}&background=111111&color=FFD600`} 
+                  alt="Captain Avatar" 
+                />
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#FFD600] text-black flex items-center justify-center shadow font-bold">
-                  <span className="material-symbols-outlined text-xs text-black" style={{ fontVariationSettings: "'FILL' 1" }}>sports_motorsports</span>
+                  <span className="material-symbols-outlined text-xs text-black" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    {activeRide.captain?.vehicleType === 'BIKE' ? 'two_wheeler' : 'directions_car'}
+                  </span>
                 </div>
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-space-xs">
-                  <h3 className="font-headline-sm text-lg font-bold text-white truncate">Vikram Singh</h3>
+                  <h3 className="font-headline-sm text-lg font-bold text-white truncate">
+                    {activeRide.captain?.user ? `${activeRide.captain.user.firstName} ${activeRide.captain.user.lastName}` : 'Captain'}
+                  </h3>
                   <span className="material-symbols-outlined text-sm text-[#FFD600]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
                 </div>
                 <div className="flex items-center gap-space-xs font-telemetry-sm text-xs text-gray-300 mt-0.5">
-                  <span className="flex items-center text-[#FFD600] font-bold">★ 4.96</span>
+                  <span className="flex items-center text-[#FFD600] font-bold">★ {activeRide.captain?.rating?.toFixed(1) || '4.9'}</span>
                   <span className="text-gray-500">·</span>
-                  <span>3,420+ trips</span>
+                  <span>{activeRide.captain?.totalTrips || 0} trips</span>
                   <span className="text-gray-500">·</span>
                   <span className="px-2 py-0.5 rounded bg-[#FFD600] text-black font-extrabold text-[10px] tracking-wide">GOLD</span>
                 </div>
@@ -100,12 +109,14 @@ export function ActiveRideSidebar() {
             <div className="flex items-center justify-between p-3 rounded-lg bg-[#1E293B] border border-slate-700">
               <div className="flex flex-col">
                 <span className="font-label-sm text-[11px] text-gray-400 uppercase tracking-wider font-semibold">Assigned Vehicle</span>
-                <span className="font-body-sm text-sm text-white font-bold">Royal Enfield Hunter 350</span>
-                <span className="font-telemetry-sm text-[11px] text-gray-300">Matte Obsidian Finish</span>
+                <span className="font-body-sm text-sm text-white font-bold">{activeRide.captain?.vehicleModel || 'Standard Vehicle'}</span>
+                <span className="font-telemetry-sm text-[11px] text-gray-300">TRIPZO Verified Fleet</span>
               </div>
               <div className="flex flex-col items-end">
                 <span className="font-label-sm text-[10px] text-gray-400 font-bold uppercase tracking-wider">VERIFIED NUMBER</span>
-                <span className="font-telemetry-md text-xs tracking-wider text-black bg-[#FFD600] px-2.5 py-1 rounded font-black mt-0.5 shadow-sm">DL 01 AB 8842</span>
+                <span className="font-telemetry-md text-xs tracking-wider text-black bg-[#FFD600] px-2.5 py-1 rounded font-black mt-0.5 shadow-sm">
+                  {activeRide.captain?.vehicleNumber || '---'}
+                </span>
               </div>
             </div>
 

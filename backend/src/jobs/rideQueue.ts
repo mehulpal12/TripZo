@@ -52,6 +52,41 @@ export const rideWorker = new Worker(
           ride.estimatedDistanceM
         );
       }
+    } else if (job.name === 'cancelIfNoAssignment') {
+      const { rideId } = job.data;
+      console.log(`BullMQ: checking if ride ${rideId} still needs cancellation...`);
+
+      const updatedCount = await prisma.ride.updateMany({
+        where: {
+          id: rideId,
+          status: RideStatus.SEARCHING,
+        },
+        data: {
+          status: RideStatus.CANCELLED,
+          cancellationReason: 'NO_CAPTAINS_AVAILABLE',
+          cancelledBy: 'SYSTEM',
+          cancelledAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
+
+      if (updatedCount.count > 0) {
+        console.log(`Ride ${rideId} cancelled due to no captain assignment.`);
+        try {
+          const { getIO } = await import('../socket');
+          const io = getIO();
+          // Emit to ride room and rider's personal room
+          const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+          io.to(`ride:${rideId}`).emit('ride:cancelled', { reason: 'NO_CAPTAINS_AVAILABLE' });
+          if (ride?.riderId) {
+            io.to(`rider:${ride.riderId}`).emit('ride:cancelled', { reason: 'NO_CAPTAINS_AVAILABLE' });
+          }
+        } catch (socketErr) {
+          console.error('Socket emit error after cancellation:', socketErr);
+        }
+      } else {
+        console.log(`Ride ${rideId} already assigned or cancelled — no action needed.`);
+      }
     } else if (job.name === 'reconciliation') {
       console.log('Running scheduled rides reconciliation sweep...');
       // Find rides that are SCHEDULED and their match time has passed
