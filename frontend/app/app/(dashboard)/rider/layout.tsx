@@ -4,75 +4,60 @@ import { SocketConnectionStatus } from "@/components/ui/SocketConnectionStatus";
 
 export default function RiderLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="h-screen w-full flex flex-col bg-background font-sans overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-black font-sans overflow-hidden selection:bg-primary/20 selection:text-primary">
       <SocketConnectionStatus />
+      
       {/* Top Navigation Bar */}
-      <header className="h-[72px] shrink-0 border-b border-border bg-card flex items-center justify-between px-6 z-50 shadow-sm">
-        <div className="flex items-center gap-6">
+      <header className="h-[50px] shrink-0 border-b border-border/60 bg-card/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 z-50 shadow-sm">
+        <div className="flex items-center gap-4 sm:gap-6">
           {/* Logo & Network Status */}
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold tracking-tighter text-primary">TRIPZO</h1>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
-              <div className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
-              <span className="text-xs font-semibold tracking-wide text-foreground">NEW DELHI · LIVE NETWORK</span>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-primary bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
+              TRIPZO
+            </h1>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/60 shadow-2xs">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+              <span className="text-xs font-semibold tracking-wide text-foreground/90">NEW DELHI · LIVE</span>
             </div>
           </div>
 
           {/* Nav Tabs */}
-          <nav className="hidden md:flex items-center gap-2 ml-8">
-            <button className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">Book Ride</button>
-            <button className="px-4 py-2 text-sm font-bold text-primary-foreground bg-primary rounded-lg shadow-[0_0_12px_rgba(255,208,0,0.3)]">Live Tracking</button>
-            <button className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">Captain Console</button>
-            <button className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">Ride History</button>
-            <button className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">Scheduled Trips</button>
+          <nav className="hidden lg:flex items-center gap-1.5">
+            <button className="px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-xl transition-all">Book Ride</button>
+            <button className="px-3.5 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-xl shadow-[0_0_16px_rgba(255,208,0,0.25)] hover:brightness-105 transition-all">Live Tracking</button>
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Search Bar */}
-          <div className="relative hidden lg:flex items-center">
-            <Search className="absolute left-3 w-4 h-4 text-muted-foreground" />
-            <input 
-              type="text" 
-              placeholder="Search coordinate..." 
-              className="pl-9 pr-12 py-2 w-64 bg-muted/50 border border-border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-            <div className="absolute right-3 flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-background border border-border rounded text-muted-foreground">⌘</kbd>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-background border border-border rounded text-muted-foreground">K</kbd>
-            </div>
-          </div>
+        <div className="flex items-center gap-3 sm:gap-4">
 
-          {/* Socket Health */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E1FFEC] border border-[#67F4B7]">
-            <CircleDot className="w-3 h-3 text-[#006E4B] animate-pulse" />
-            <span className="text-xs font-bold text-[#006E4B]">SOCKET 99.98%</span>
-          </div>
+
 
           {/* Actions */}
-          <button className="w-10 h-10 rounded-full flex items-center justify-center bg-muted/50 border border-border hover:bg-muted transition-colors">
-            <Bell className="w-5 h-5 text-foreground" />
+          <button className="w-10 h-10 rounded-xl flex items-center justify-center bg-muted/40 border border-border/80 hover:bg-muted hover:border-border transition-all relative group shadow-2xs">
+            <Bell className="w-4 h-4 text-foreground/80 group-hover:text-foreground transition-colors" />
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-primary" />
           </button>
           
-          <button className="w-10 h-10 rounded-full overflow-hidden border-2 border-border shadow-sm">
-            <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Profile" className="w-full h-full object-cover" />
+          <button className="w-10 h-10 rounded-xl overflow-hidden border border-border/80 hover:ring-2 hover:ring-primary/40 transition-all shadow-2xs">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Profile" className="w-full h-full object-cover" />
           </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full overflow-hidden">
+      <main className="flex-1 w-full overflow-hidden relative">
         {children}
       </main>
 
       {/* Bottom Footer */}
-      <footer className="h-10 shrink-0 border-t border-border bg-[#0f131c] flex items-center justify-between px-6 text-xs font-medium text-slate-400 z-50">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-primary">TRIPZO</span>
-          <span>Autonomous Urban Mobility Console © 2025</span>
+      <footer className="h-10 shrink-0 border-t border-border/80 bg-[#0f131c] flex items-center justify-between px-4 sm:px-6 text-xs font-medium text-slate-400 z-50">
+        <div className="flex items-center gap-2 truncate">
+          <span className="font-bold text-primary tracking-tight">TRIPZO</span>
+          <span className="hidden sm:inline text-slate-600">|</span>
+          <span className="truncate">Autonomous Urban Mobility Console © 2025</span>
         </div>
-        <div className="flex gap-6">
-          <button className="hover:text-white transition-colors">Telematics Protocol</button>
+        <div className="hidden md:flex gap-6 text-slate-400">
+            <button className="hover:text-white transition-colors">Mehul Pal</button>
           <button className="hover:text-white transition-colors">Fleet Operations</button>
           <button className="hover:text-white transition-colors">Safety Dispatch</button>
           <button className="hover:text-white transition-colors">System Status</button>

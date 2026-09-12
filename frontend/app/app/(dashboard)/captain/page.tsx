@@ -125,11 +125,7 @@ export default function CaptainPage() {
                 <span className="text-sm font-extrabold tracking-tight">{isOnline ? 'ONLINE · ACCEPTING RIDES' : 'OFFLINE'}</span>
               </div>
               <span className={`material-symbols-outlined ${isOnline ? 'text-[#FFD600]' : 'text-slate-400'} group-hover:translate-x-0.5 transition-transform text-xl`}>power_settings_new</span>
-            </button>
-            <div className="hidden 2xl:flex items-center gap-space-xs px-3 py-1.5 rounded-full bg-[#F1F3F5] border border-slate-200">
-              <span className="material-symbols-outlined text-slate-600 text-sm">satellite_alt</span>
-              <span className="text-xs font-semibold text-slate-600 uppercase">RTK-GPS: ±0.3m · 100Hz</span>
-            </div>
+              </button>
           </div>
 
           {/* Real-time Shift Telemetry */}
@@ -367,27 +363,7 @@ export default function CaptainPage() {
             </div>
           </div>
 
-          {/* Quick Vehicle & Hardware Telemetry */}
-          <div className="grid grid-cols-2 gap-space-sm mt-4">
-            <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center gap-3 shadow-sm">
-              <div className="p-2 rounded-lg bg-[#F1F3F5] text-slate-800">
-                <span className="material-symbols-outlined text-xl font-bold">battery_charging_full</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 font-bold uppercase block">Battery Range</span>
-                <span className="text-sm font-black text-[#111111]">84% · 118 km</span>
-              </div>
-            </div>
-            <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center gap-3 shadow-sm">
-              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
-                <span className="material-symbols-outlined text-xl font-bold">network_check</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 font-bold uppercase block">Mesh Latency</span>
-                <span className="text-sm font-black text-emerald-700">18 ms · Strong</span>
-              </div>
-            </div>
-          </div>
+          
         </div>
 
         {/* RIGHT PANEL: Bright Daylight Navigation Map Viewport */}

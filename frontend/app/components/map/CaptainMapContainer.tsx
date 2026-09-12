@@ -40,11 +40,6 @@ export function CaptainMapContainer() {
           {/* High-Vis Core Vector */}
           <path d="M 290 220 C 360 260, 410 390, 520 440 S 660 520, 710 570" fill="none" stroke="url(#daylightRouteGradient)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="6"></path>
           
-          {/* Surge Heatmap Highlight Zones (Connaught Place & Cyber City) */}
-          <circle cx="290" cy="220" fill="#FFD600" fillOpacity="0.25" r="55"></circle>
-          <circle cx="290" cy="220" fill="#FFD600" fillOpacity="0.4" r="24"></circle>
-          <circle cx="710" cy="570" fill="#0284C7" fillOpacity="0.22" r="75"></circle>
-          <circle cx="710" cy="570" fill="#0284C7" fillOpacity="0.35" r="35"></circle>
         </svg>
       )}
 
@@ -81,26 +76,6 @@ export function CaptainMapContainer() {
         </>
       )}
 
-      {/* Map Top Floating HUD */}
-      <div className="relative z-20 flex flex-wrap items-center justify-between gap-space-md">
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#111111] text-white shadow-lg border border-slate-700">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#FFD600] animate-ping"></span>
-          <span className="text-xs font-black text-[#FFD600]">HIGH SURGE DEMAND (+1.3x)</span>
-          <span className="text-xs text-slate-300 font-medium">· DLF & Outer Ring</span>
-        </div>
-        <div className="flex items-center gap-1 p-1 rounded-full bg-[#111111]/90 backdrop-blur-md shadow-lg border border-slate-700 text-white">
-          <button className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#FFD600] text-black font-extrabold text-xs transition-all shadow-sm">
-            <span className="material-symbols-outlined text-xs font-black">local_fire_department</span>
-            <span>Surge Heatmap: ON</span>
-          </button>
-          <button aria-label="Layers" className="p-1.5 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition-all">
-            <span className="material-symbols-outlined text-base">layers</span>
-          </button>
-          <button aria-label="Traffic" className="p-1.5 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition-all">
-            <span className="material-symbols-outlined text-base">traffic</span>
-          </button>
-        </div>
-      </div>
 
       {/* Map Bottom Floating Navigation Command Deck */}
       <div className="relative z-20 flex flex-wrap items-center justify-between gap-space-md p-space-sm rounded-xl bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 shadow-2xl mt-auto">
