@@ -5,7 +5,7 @@ import { Search, Bell, Car, Navigation, Shield, History, Calendar } from "lucide
 
 export default function CaptainLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="h-screen w-full flex flex-col bg-[#F8F9FA] font-sans overflow-hidden text-[#111111] selection:bg-[#FFD600] selection:text-black">
+    <div className="min-h-screen w-full flex flex-col bg-[#F8F9FA] font-sans text-[#111111] selection:bg-[#FFD600] selection:text-black">
       <SocketConnectionStatus />
       
       {/* Top Navigation Chrome */}
@@ -50,7 +50,7 @@ export default function CaptainLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full overflow-hidden bg-[#F8F9FA]">
+      <main className="flex-1 w-full bg-[#F8F9FA]">
         {children}
       </main>
 

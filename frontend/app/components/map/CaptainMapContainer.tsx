@@ -21,6 +21,7 @@ const mapOptions: google.maps.MapOptions = {
   mapTypeControl: false,
   streetViewControl: false,
   fullscreenControl: false,
+  gestureHandling: "cooperative",
   styles: [
     { elementType: "geometry", stylers: [{ color: "#f8f9fa" }] },
     { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
@@ -273,9 +274,9 @@ export function CaptainMapContainer() {
 
   if (loadError) {
     return (
-      <div className="relative w-full h-[640px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-slate-700 shadow-xl flex flex-col items-center justify-center p-6 text-center text-white">
-        <span className="material-symbols-outlined text-4xl text-rose-400 mb-2">map_error</span>
-        <h4 className="text-lg font-bold">Failed to load Google Maps</h4>
+      <div className="relative w-full h-[340px] xs:h-[380px] sm:h-[460px] md:h-[520px] lg:h-[600px] xl:h-[640px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-slate-700 shadow-xl flex flex-col items-center justify-center p-4 sm:p-6 text-center text-white">
+        <span className="material-symbols-outlined text-3xl sm:text-4xl text-rose-400 mb-2">map_error</span>
+        <h4 className="text-base sm:text-lg font-bold">Failed to load Google Maps</h4>
         <p className="text-xs text-slate-400 max-w-sm mt-1">Please verify that your Google Maps API Key is configured and valid.</p>
       </div>
     );
@@ -283,17 +284,17 @@ export function CaptainMapContainer() {
 
   if (!isLoaded) {
     return (
-      <div className="relative w-full h-[640px] rounded-2xl overflow-hidden bg-slate-100 border-2 border-slate-200 shadow-xl flex flex-col items-center justify-center">
+      <div className="relative w-full h-[340px] xs:h-[380px] sm:h-[460px] md:h-[520px] lg:h-[600px] xl:h-[640px] rounded-2xl overflow-hidden bg-slate-100 border-2 border-slate-200 shadow-xl flex flex-col items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-[#FFD600] border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">Loading Live Navigation Map...</span>
+          <div className="w-9 h-9 sm:w-10 sm:h-10 border-4 border-[#FFD600] border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-[11px] sm:text-xs font-bold text-slate-700 tracking-wider uppercase">Loading Live Navigation Map...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-[640px] rounded-2xl overflow-hidden bg-white border-2 border-slate-200 shadow-xl flex flex-col justify-between">
+    <div className="relative w-full h-[340px] xs:h-[380px] sm:h-[460px] md:h-[520px] lg:h-[600px] xl:h-[640px] rounded-2xl overflow-hidden bg-white border-2 border-slate-200 shadow-xl flex flex-col justify-between">
       {/* Live Google Maps Canvas */}
       <GoogleMap
         mapContainerStyle={containerStyle}
@@ -351,19 +352,19 @@ export function CaptainMapContainer() {
 
       {/* TOP HUD: Turn-by-Turn Navigation Instruction Header */}
       {activeRide && (
-        <div className="absolute top-3 left-3 right-3 z-30 flex flex-col gap-1.5 pointer-events-none">
-          <div className="pointer-events-auto flex items-center justify-between p-3.5 rounded-xl bg-[#111111]/95 backdrop-blur-md text-white border border-slate-700 shadow-2xl">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${
+        <div className="absolute top-2 sm:top-3 left-2 sm:left-3 right-2 sm:right-3 z-30 flex flex-col gap-1.5 pointer-events-none">
+          <div className="pointer-events-auto flex items-center justify-between p-2.5 sm:p-3.5 rounded-xl bg-[#111111]/95 backdrop-blur-md text-white border border-slate-700 shadow-2xl">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${
                 navState.phase === "DROPOFF" ? "bg-emerald-500 text-black" : "bg-[#FFD600] text-black"
               }`}>
-                <span className="material-symbols-outlined text-2xl font-black">
+                <span className="material-symbols-outlined text-xl sm:text-2xl font-black">
                   {navState.phase === "DROPOFF" ? "navigation" : activeRide.status === "CAPTAIN_ARRIVED" ? "pin_drop" : "directions_bike"}
                 </span>
               </div>
               <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase border ${
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wider uppercase border ${
                     navState.phase === "DROPOFF" 
                       ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40" 
                       : "bg-yellow-950/80 text-yellow-300 border-yellow-500/40"
@@ -371,16 +372,16 @@ export function CaptainMapContainer() {
                     {navState.badge}
                   </span>
                   {navDistance && (
-                    <span className="text-xs font-bold text-slate-300">
+                    <span className="text-[11px] sm:text-xs font-bold text-slate-300">
                       {navDistance} · {navDuration}
                     </span>
                   )}
                 </div>
-                <span className="text-sm font-extrabold truncate text-white mt-0.5">
+                <span className="text-xs sm:text-sm font-extrabold truncate text-white mt-0.5">
                   {navState.targetAddress}
                 </span>
                 {nextInstruction && (
-                  <span className="text-xs text-[#FFD600] truncate font-medium">
+                  <span className="text-[11px] sm:text-xs text-[#FFD600] truncate font-medium">
                     {nextInstruction}
                   </span>
                 )}
@@ -389,11 +390,11 @@ export function CaptainMapContainer() {
 
             <button
               onClick={handleLaunchGoogleMaps}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1E293B] hover:bg-slate-700 text-[#FFD600] border border-slate-600 transition-all font-bold text-xs flex-shrink-0 ml-2"
+              className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-[#1E293B] hover:bg-slate-700 text-[#FFD600] border border-slate-600 transition-all font-bold text-xs flex-shrink-0 ml-1.5 sm:ml-2"
               title="Open full turn-by-turn navigation in external Google Maps"
             >
-              <span className="material-symbols-outlined text-base">near_me</span>
-              <span>Navigate</span>
+              <span className="material-symbols-outlined text-sm sm:text-base">near_me</span>
+              <span className="hidden sm:inline">Navigate</span>
             </button>
           </div>
         </div>
@@ -401,17 +402,17 @@ export function CaptainMapContainer() {
 
       {/* TOP HUD (Idle / Online State) */}
       {!activeRide && isOnline && (
-        <div className="absolute top-3 left-3 z-30 pointer-events-none">
-          <div className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#111111]/90 backdrop-blur-md text-white border border-slate-700 shadow-xl">
-            <span className="relative flex h-2.5 w-2.5">
+        <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-30 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#111111]/90 backdrop-blur-md text-white border border-slate-700 shadow-xl">
+            <span className="relative flex h-2 sm:h-2.5 w-2 sm:w-2.5">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                 isGpsActive ? "bg-[#FFD600]" : "bg-amber-400"
               }`}></span>
-              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+              <span className={`relative inline-flex rounded-full h-2 sm:h-2.5 w-2 sm:w-2.5 ${
                 isGpsActive ? "bg-[#FFD600]" : "bg-amber-400"
               }`}></span>
             </span>
-            <span className="text-xs font-black tracking-wide text-slate-200 uppercase">
+            <span className="text-[10px] sm:text-xs font-black tracking-wide text-slate-200 uppercase">
               {isGpsActive
                 ? "Live GPS Active · Searching for rides"
                 : locationError
@@ -424,12 +425,12 @@ export function CaptainMapContainer() {
 
       {/* GPS Warning / Error Notification Banner */}
       {isOnline && locationError && (
-        <div className="absolute top-16 left-3 right-3 z-30 pointer-events-none">
-          <div className="pointer-events-auto flex items-center gap-2.5 p-3 rounded-xl bg-rose-950/95 border border-rose-500/50 text-white shadow-2xl backdrop-blur-md">
-            <span className="material-symbols-outlined text-rose-400 text-xl flex-shrink-0">location_off</span>
+        <div className="absolute top-12 sm:top-16 left-2 sm:left-3 right-2 sm:right-3 z-30 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-2 sm:gap-2.5 p-2.5 sm:p-3 rounded-xl bg-rose-950/95 border border-rose-500/50 text-white shadow-2xl backdrop-blur-md">
+            <span className="material-symbols-outlined text-rose-400 text-lg sm:text-xl flex-shrink-0">location_off</span>
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-rose-200">{locationError}</span>
-              <span className="text-[11px] text-rose-300/80">Click your browser address bar's site settings to allow location permissions.</span>
+              <span className="text-[11px] sm:text-xs font-bold text-rose-200">{locationError}</span>
+              <span className="text-[10px] sm:text-[11px] text-rose-300/80">Check browser address bar settings to enable GPS.</span>
             </div>
           </div>
         </div>
@@ -437,10 +438,10 @@ export function CaptainMapContainer() {
 
       {/* TOP HUD (Offline State) */}
       {!isOnline && (
-        <div className="absolute top-3 left-3 z-30 pointer-events-none">
-          <div className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 backdrop-blur-md text-slate-300 border border-slate-700 shadow-xl">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-            <span className="text-xs font-bold tracking-wide uppercase">
+        <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-30 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-900/90 backdrop-blur-md text-slate-300 border border-slate-700 shadow-xl">
+            <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-slate-500"></span>
+            <span className="text-[10px] sm:text-xs font-bold tracking-wide uppercase">
               You are Offline · Toggle switch to go online
             </span>
           </div>
@@ -448,19 +449,19 @@ export function CaptainMapContainer() {
       )}
 
       {/* FLOATING CONTROLS: Right-hand Map Action Buttons */}
-      <div className="absolute right-3 bottom-20 z-30 flex flex-col gap-2 pointer-events-auto">
+      <div className="absolute right-2 sm:right-3 bottom-16 sm:bottom-20 z-30 flex flex-col gap-1.5 sm:gap-2 pointer-events-auto">
         <button
           onClick={handleRecenter}
-          className="w-10 h-10 rounded-xl bg-[#111111] hover:bg-slate-800 text-white hover:text-[#FFD600] border border-slate-700 flex items-center justify-center shadow-xl transition-all"
+          className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#111111] hover:bg-slate-800 text-white hover:text-[#FFD600] border border-slate-700 flex items-center justify-center shadow-xl transition-all"
           title="Recenter Map"
           type="button"
         >
-          <span className="material-symbols-outlined text-xl">my_location</span>
+          <span className="material-symbols-outlined text-base sm:text-xl">my_location</span>
         </button>
 
         <button
           onClick={() => setShowTraffic((prev) => !prev)}
-          className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-xl transition-all ${
+          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shadow-xl transition-all ${
             showTraffic 
               ? "bg-[#FFD600] text-black border-yellow-400 font-bold" 
               : "bg-[#111111] hover:bg-slate-800 text-white hover:text-[#FFD600] border-slate-700"
@@ -468,44 +469,45 @@ export function CaptainMapContainer() {
           title="Toggle Live Traffic Conditions"
           type="button"
         >
-          <span className="material-symbols-outlined text-xl">traffic</span>
+          <span className="material-symbols-outlined text-base sm:text-xl">traffic</span>
         </button>
       </div>
 
       {/* BOTTOM COMMAND DECK */}
-      <div className="relative z-30 flex flex-wrap items-center justify-between gap-space-sm p-2.5 m-3 rounded-xl bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 shadow-2xl">
-        <div className="flex items-center gap-2">
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-2 p-2 sm:p-2.5 m-2 sm:m-3 rounded-xl bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 shadow-2xl">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial min-w-0">
           <button
             onClick={handleLaunchGoogleMaps}
             disabled={!navState.targetLocation}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#FFD600] text-[#111111] hover:bg-[#FACC15] disabled:opacity-40 transition-all font-black text-xs shadow-md"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-lg bg-[#FFD600] text-[#111111] hover:bg-[#FACC15] disabled:opacity-40 transition-all font-black text-[11px] sm:text-xs shadow-md truncate"
           >
-            <span className="material-symbols-outlined text-base font-black">directions</span>
-            <span>Google Maps Turn-by-Turn</span>
+            <span className="material-symbols-outlined text-sm sm:text-base font-black">directions</span>
+            <span className="hidden xs:inline">Google Maps </span>
+            <span>Turn-by-Turn</span>
           </button>
 
           <button
             onClick={() => setShowContactModal(true)}
             disabled={!activeRide}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-all text-xs font-bold border border-slate-700"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-all text-[11px] sm:text-xs font-bold border border-slate-700 truncate"
           >
-            <span className="material-symbols-outlined text-emerald-400 text-base">call</span>
+            <span className="material-symbols-outlined text-emerald-400 text-sm sm:text-base">call</span>
             <span>Rider Contact</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <button
             onClick={() => alert("SOS Emergency Dispatch Alert triggered. Support team notified.")}
-            className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-800 text-rose-400 hover:bg-rose-950 border border-slate-700 transition-all shadow-sm"
+            className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-800 text-rose-400 hover:bg-rose-950 border border-slate-700 transition-all shadow-sm"
             title="Safety Dispatch SOS"
           >
-            <span className="material-symbols-outlined text-lg">shield</span>
+            <span className="material-symbols-outlined text-base sm:text-lg">shield</span>
           </button>
 
-          <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700 text-[11px] font-bold text-slate-300">
+          <div className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700 text-[11px] font-bold text-slate-300">
             <span className="material-symbols-outlined text-sm text-[#FFD600]">speed</span>
-            <span>GPS Tracking Live</span>
+            <span>GPS Active</span>
           </div>
         </div>
       </div>
