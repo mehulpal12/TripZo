@@ -10,6 +10,7 @@ export default function CaptainPage() {
   const { isOnline, setOnline, activeRequest, setActiveRequest, activeRide, setActiveRide } = useCaptainStore();
   const [countdown, setCountdown] = useState(15);
   const [accepting, setAccepting] = useState(false);
+  const [updatingRide, setUpdatingRide] = useState(false);
 
   // Initialize socket and simulator
   useCaptainSocket();
@@ -290,50 +291,124 @@ export default function CaptainPage() {
           {activeRide && (
             <div className="flex flex-col gap-space-sm p-space-md rounded-2xl bg-[#111111] text-white shadow-xl border border-slate-800">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#FFD600] uppercase">ACTIVE RIDE</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-[#1E293B]">IN PROGRESS</span>
+                <span className="text-xs font-bold text-[#FFD600] uppercase tracking-wider">ACTIVE RIDE</span>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
+                  activeRide.status === 'IN_PROGRESS' 
+                    ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/30 animate-pulse' 
+                    : activeRide.status === 'CAPTAIN_ARRIVED'
+                    ? 'bg-amber-950/80 text-[#FFD600] border-amber-500/30'
+                    : 'bg-blue-950/80 text-blue-400 border-blue-500/30'
+                }`}>
+                  {activeRide.status.replace(/_/g, ' ')}
+                </span>
               </div>
               
               <div className="flex items-center gap-3 py-2">
-                <span className="material-symbols-outlined text-4xl text-[#FFD600]">directions_bike</span>
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold">Navigating to Dropoff</span>
-                  <span className="text-xs text-slate-400">Cyber City</span>
+                <span className="material-symbols-outlined text-4xl text-[#FFD600]">
+                  {activeRide.status === 'IN_PROGRESS' ? 'near_me' : 'directions_bike'}
+                </span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-bold truncate">
+                    {activeRide.status === 'IN_PROGRESS' 
+                      ? 'Driving to Destination' 
+                      : activeRide.status === 'CAPTAIN_ARRIVED' 
+                      ? 'Waiting for Rider at Pickup' 
+                      : 'Heading to Pickup Location'}
+                  </span>
+                  <span className="text-xs text-slate-400 truncate">
+                    {activeRide.status === 'IN_PROGRESS' 
+                      ? activeRide.destination?.address || activeRide.destination?.name || 'Destination'
+                      : activeRide.pickup?.address || activeRide.pickup?.name || 'Pickup Point'}
+                  </span>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <button 
-                  className="py-3 px-4 rounded-xl bg-[#1E293B] hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-colors"
-                  onClick={async () => {
-                     try {
-                       const res = await captainService.updateRideStatus(activeRide.id, 'CAPTAIN_ARRIVED');
-                       setActiveRide(res.ride);
-                     } catch (err) {
-                       console.error(err);
-                     }
-                  }}
-                >
-                  Arrived at Pickup
-                </button>
-                <button 
-                  className="py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-black text-sm transition-colors shadow-lg shadow-emerald-500/20"
-                  onClick={async () => {
-                     try {
-                       if (activeRide.status === 'CAPTAIN_ARRIVED') {
-                         const res = await captainService.updateRideStatus(activeRide.id, 'IN_PROGRESS');
-                         setActiveRide(res.ride);
-                       } else if (activeRide.status === 'IN_PROGRESS') {
-                         await captainService.updateRideStatus(activeRide.id, 'COMPLETED');
-                         setActiveRide(null);
-                       }
-                     } catch (err) {
-                       console.error(err);
-                     }
-                  }}
-                >
-                  {activeRide.status === 'CAPTAIN_ARRIVED' ? 'Start Trip' : 'Complete Trip'}
-                </button>
+              <div className="flex flex-col gap-2 mt-2">
+                {/* Step 1: Heading to Pickup -> Captain Arrives */}
+                {activeRide.status === 'CAPTAIN_ASSIGNED' || (activeRide.status as string) === 'CAPTAIN_ARRIVING' ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      disabled={updatingRide}
+                      className="py-3 px-3 rounded-xl bg-[#1E293B] hover:bg-slate-700 disabled:opacity-50 text-white font-bold text-sm border border-slate-700 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
+                      onClick={async () => {
+                        setUpdatingRide(true);
+                        try {
+                          const res = await captainService.updateRideStatus(activeRide.id, 'CAPTAIN_ARRIVED');
+                          setActiveRide(res.ride);
+                        } catch (err: any) {
+                          console.error('Failed to mark arrived:', err);
+                          alert(err?.response?.data?.message || 'Failed to update status to Arrived');
+                        } finally {
+                          setUpdatingRide(false);
+                        }
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-base">pin_drop</span>
+                      <span>Arrived Pickup</span>
+                    </button>
+                    <button 
+                      disabled={updatingRide}
+                      className="py-3 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-black font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+                      onClick={async () => {
+                        setUpdatingRide(true);
+                        try {
+                          const res = await captainService.updateRideStatus(activeRide.id, 'IN_PROGRESS');
+                          setActiveRide(res.ride);
+                        } catch (err: any) {
+                          console.error('Failed to start trip:', err);
+                          alert(err?.response?.data?.message || 'Failed to start trip');
+                        } finally {
+                          setUpdatingRide(false);
+                        }
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-base">play_arrow</span>
+                      <span>Start Trip</span>
+                    </button>
+                  </div>
+                ) : activeRide.status === 'CAPTAIN_ARRIVED' ? (
+                  /* Step 2: Captain Arrived -> Start Trip */
+                  <button 
+                    disabled={updatingRide}
+                    className="w-full py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-black font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
+                    onClick={async () => {
+                      setUpdatingRide(true);
+                      try {
+                        const res = await captainService.updateRideStatus(activeRide.id, 'IN_PROGRESS');
+                        setActiveRide(res.ride);
+                      } catch (err: any) {
+                        console.error('Failed to start trip:', err);
+                        alert(err?.response?.data?.message || 'Failed to start trip');
+                      } finally {
+                        setUpdatingRide(false);
+                      }
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-xl">play_arrow</span>
+                    <span>{updatingRide ? 'STARTING TRIP...' : 'START TRIP (RIDER ONBOARD)'}</span>
+                  </button>
+                ) : activeRide.status === 'IN_PROGRESS' ? (
+                  /* Step 3: Trip In Progress -> Complete Trip */
+                  <button 
+                    disabled={updatingRide}
+                    className="w-full py-3.5 px-4 rounded-xl bg-[#FFD600] hover:bg-[#FACC15] disabled:opacity-50 text-black font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-yellow-500/25 flex items-center justify-center gap-2"
+                    onClick={async () => {
+                      setUpdatingRide(true);
+                      try {
+                        await captainService.updateRideStatus(activeRide.id, 'COMPLETED');
+                        setActiveRide(null);
+                      } catch (err: any) {
+                        console.error('Failed to complete trip:', err);
+                        alert(err?.response?.data?.message || 'Failed to complete trip');
+                      } finally {
+                        setUpdatingRide(false);
+                      }
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-xl">check_circle</span>
+                    <span>{updatingRide ? 'COMPLETING TRIP...' : 'COMPLETE TRIP & COLLECT FARE'}</span>
+                  </button>
+                ) : null}
               </div>
             </div>
           )}

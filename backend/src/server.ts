@@ -6,7 +6,7 @@ import { logger } from './utils/logger';
 import { createHttpTerminator } from 'http-terminator';
 import http from 'http';
 import { initializeSocket } from './socket';
-import { initReconciliationJob, rideWorker } from './jobs/rideQueue';
+import { initReconciliationJob, rideQueue, rideWorker } from './jobs/rideQueue';
 
 const startServer = async () => {
   await connectDB();
@@ -16,7 +16,7 @@ const startServer = async () => {
   const server = http.createServer(app);
 
   // Initialize Socket.io
-  initializeSocket(server);
+  await initializeSocket(server);
 
   // Start BullMQ Jobs
   initReconciliationJob().catch((err) => {
@@ -37,6 +37,9 @@ const startServer = async () => {
       
       await rideWorker.close();
       logger.info('BullMQ worker closed');
+      
+      await rideQueue.close();
+      logger.info('BullMQ queue closed');
       
       await prisma.$disconnect();
       logger.info('PostgreSQL connection closed');

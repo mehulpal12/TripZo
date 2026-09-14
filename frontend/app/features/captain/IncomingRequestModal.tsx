@@ -18,6 +18,8 @@ export function IncomingRequestModal() {
       return;
     }
 
+    setTimeLeft(15);
+
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -30,7 +32,7 @@ export function IncomingRequestModal() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [activeRequest, setActiveRequest]);
+  }, [activeRequest?.id, setActiveRequest]);
 
   if (!activeRequest) return null;
 
@@ -47,8 +49,16 @@ export function IncomingRequestModal() {
     }
   };
 
-  const handleReject = () => {
-    setActiveRequest(null);
+  const handleReject = async () => {
+    try {
+      if (activeRequest?.id) {
+        await captainService.rejectRide(activeRequest.id);
+      }
+    } catch (err) {
+      console.error("Failed to register rejection", err);
+    } finally {
+      setActiveRequest(null);
+    }
   };
 
   return (

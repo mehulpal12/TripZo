@@ -4,6 +4,10 @@ import { logger } from '../utils/logger';
 
 export const redisClient = createClient({
   url: env.REDIS_URL,
+  socket: {
+    connectTimeout: 5000,
+    reconnectStrategy: (retries: number) => Math.min(retries * 100, 3000),
+  },
 });
 
 redisClient.on('error', (err) => logger.error('Redis Client Error', err));

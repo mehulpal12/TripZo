@@ -27,6 +27,24 @@ export const estimateFare = (
   destinationLng: number,
   vehicleType: string
 ) => {
+  if (
+    !Number.isFinite(pickupLat) ||
+    !Number.isFinite(pickupLng) ||
+    !Number.isFinite(destinationLat) ||
+    !Number.isFinite(destinationLng)
+  ) {
+    throw new AppError('INVALID_COORDINATES', 400, 'Coordinates must be valid finite numbers');
+  }
+
+  if (
+    pickupLat < -90 || pickupLat > 90 ||
+    destinationLat < -90 || destinationLat > 90 ||
+    pickupLng < -180 || pickupLng > 180 ||
+    destinationLng < -180 || destinationLng > 180
+  ) {
+    throw new AppError('INVALID_COORDINATES', 400, 'Coordinates are outside valid latitude/longitude ranges');
+  }
+
   if (vehicleType !== 'BIKE') {
     throw new AppError('UNSUPPORTED_VEHICLE', 400, 'Currently only BIKE is supported');
   }

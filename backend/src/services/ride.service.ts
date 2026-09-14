@@ -4,6 +4,7 @@ import { RideStatus, Role, CaptainStatus } from '@prisma/client';
 import { getNearbyCaptains } from './matching.service';
 import { getIO } from '../socket';
 import { redisClient } from '../config/redis';
+import { logger } from '../utils/logger';
 
 export const createRide = async (data: {
   riderId: string;
@@ -14,16 +15,32 @@ export const createRide = async (data: {
   estimatedDistanceM: number;
   estimatedDurationS: number;
   estimatedFare: number;
+  vehicleType?: string;
 }) => {
+  const { vehicleType = 'BIKE', ...rideData } = data;
   const ride = await prisma.ride.create({
     data: {
-      ...data,
+      ...rideData,
       status: RideStatus.SEARCHING,
     },
   });
 
   // Start the matching flow
-  await startMatchingForRide(ride.id, data.pickupLat, data.pickupLng, data.destinationLat, data.destinationLng, data.estimatedFare, data.estimatedDistanceM);
+  try {
+    await startMatchingForRide(
+      ride.id,
+      data.pickupLat,
+      data.pickupLng,
+      data.destinationLat,
+      data.destinationLng,
+      data.estimatedFare,
+      data.estimatedDistanceM,
+      vehicleType
+    );
+  } catch (err) {
+    logger.error(`Matching failed for ride ${ride.id}`, err);
+    // BullMQ timeout job is guaranteed — ride will self-cancel
+  }
 
   return ride;
 };
@@ -53,7 +70,14 @@ export const createScheduledRide = async (data: {
   const delay = Math.max(0, matchTime - now); // If it's already within 15 mins, queue it immediately
 
   const { rideQueue } = await import('../jobs/rideQueue');
-  await rideQueue.add('startMatching', { rideId: ride.id }, { delay });
+  await rideQueue.add(
+    'startMatching',
+    { rideId: ride.id },
+    {
+      delay,
+      jobId: `startMatching-${ride.id}`,
+    }
+  );
 
   return ride;
 };
@@ -65,51 +89,46 @@ export const startMatchingForRide = async (
   destinationLat: number | string | any,
   destinationLng: number | string | any,
   estimatedFare: number | string | any,
-  estimatedDistanceM: number | string | any
+  estimatedDistanceM: number | string | any,
+  vehicleType: string = 'BIKE'
 ) => {
-  try {
-    // In case variables are Prisma Decimals, convert to number
-    const pLat = Number(pickupLat);
-    const pLng = Number(pickupLng);
-    const dLat = Number(destinationLat);
-    const dLng = Number(destinationLng);
-    const fare = Number(estimatedFare);
-    const dist = Number(estimatedDistanceM);
-
-    const io = getIO();
-    const vehicleType = 'BIKE'; // Assuming BIKE for MVP
-    const radiusKm = 5; // Search radius
-    const nearbyCaptains = await getNearbyCaptains(rideId, pLat, pLng, radiusKm, vehicleType);
-
-    if (nearbyCaptains.length > 0) {
-      console.log(`Found ${nearbyCaptains.length} eligible captains for ride ${rideId}`);
-      nearbyCaptains.forEach((captain) => {
-        io.to(`captain:${captain.userId}`).emit('ride:new', {
-          rideId: rideId,
-          pickup: { lat: pLat, lng: pLng },
-          destination: { lat: dLat, lng: dLng },
-          estimatedFare: fare,
-          estimatedDistanceM: dist,
-        });
-      });
-    } else {
-      console.log(`No eligible captains found initially for ride ${rideId}`);
+  // Queue BullMQ job OUTSIDE the matching logic — always runs:
+  const { rideQueue } = await import('../jobs/rideQueue');
+  await rideQueue.add(
+    'cancelIfNoAssignment',
+    { rideId },
+    {
+      delay: 2 * 60 * 1000,
+      jobId: `cancel-timeout-${rideId}`, // Idempotent: won't add duplicate if already scheduled
     }
+  );
 
-    // Schedule a durable 2-minute fallback via BullMQ (survives server restarts)
-    const { rideQueue } = await import('../jobs/rideQueue');
-    await rideQueue.add(
-      'cancelIfNoAssignment',
-      { rideId },
-      {
-        delay: 2 * 60 * 1000,
-        jobId: `cancel-timeout-${rideId}`, // Idempotent: won't add duplicate if already scheduled
-      }
-    );
+  // In case variables are Prisma Decimals, convert to number
+  const pLat = Number(pickupLat);
+  const pLng = Number(pickupLng);
+  const dLat = Number(destinationLat);
+  const dLng = Number(destinationLng);
+  const fare = Number(estimatedFare);
+  const dist = Number(estimatedDistanceM);
 
+  const io = getIO();
+  const radiusKm = 5; // Search radius
+  const nearbyCaptains = await getNearbyCaptains(rideId, pLat, pLng, radiusKm, vehicleType);
 
-  } catch (err) {
-    console.error('Error during matching flow:', err);
+  if (nearbyCaptains.length > 0) {
+    console.log(`Found ${nearbyCaptains.length} eligible captains for ride ${rideId} (vehicleType: ${vehicleType})`);
+    nearbyCaptains.forEach((captain) => {
+      io.to(`captain:${captain.userId}`).emit('ride:new', {
+        rideId: rideId,
+        pickup: { lat: pLat, lng: pLng },
+        destination: { lat: dLat, lng: dLng },
+        estimatedFare: fare,
+        estimatedDistanceM: dist,
+        vehicleType,
+      });
+    });
+  } else {
+    console.log(`No eligible captains found initially for ride ${rideId}`);
   }
 };
 
@@ -160,8 +179,11 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
   if (role === Role.RIDER && ride.riderId !== userId) {
     throw new AppError('UNAUTHORIZED', 403, 'Not authorized to cancel this ride');
   }
-  if (role === Role.CAPTAIN && ride.captainId !== userId) {
-    throw new AppError('UNAUTHORIZED', 403, 'Not authorized to cancel this ride');
+  if (role === Role.CAPTAIN) {
+    const captain = await prisma.captain.findUnique({ where: { userId } });
+    if (!captain || ride.captainId !== captain.id) {
+      throw new AppError('UNAUTHORIZED', 403, 'Not authorized to cancel this ride');
+    }
   }
 
   // Allowed states to cancel from
@@ -195,6 +217,17 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
 
   if (updatedCount.count === 0) {
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified by another request. Please try again.');
+  }
+
+  // Clear BullMQ fallback timeout job if still scheduled
+  try {
+    const { rideQueue } = await import('../jobs/rideQueue');
+    const job = await rideQueue.getJob(`cancel-timeout-${rideId}`);
+    if (job) {
+      await job.remove();
+    }
+  } catch (err) {
+    console.error(`Error removing cancel-timeout job for ride ${rideId}:`, err);
   }
 
   // Clear Redis assignment cache and reset captain status if assigned
@@ -262,28 +295,40 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
     throw new AppError('INVALID_STATE', 409, 'You have already rejected this ride');
   }
 
-  const updatedCount = await prisma.ride.updateMany({
-    where: {
-      id: rideId,
-      status: RideStatus.SEARCHING,
-      version: ride.version,
-    },
-    data: {
-      status: RideStatus.CAPTAIN_ASSIGNED,
-      captainId: captain.id,
-      assignedAt: new Date(),
-      version: ride.version + 1,
-    },
-  });
+  // Execute atomic multi-entity update within an interactive transaction to prevent TOCTOU
+  await prisma.$transaction(async (tx) => {
+    const captainUpdate = await tx.captain.updateMany({
+      where: {
+        id: captain.id,
+        status: CaptainStatus.AVAILABLE,
+      },
+      data: {
+        status: CaptainStatus.ON_RIDE,
+      },
+    });
 
-  if (updatedCount.count === 0) {
-    throw new AppError('CONCURRENCY_ERROR', 409, 'Ride was accepted by someone else or cancelled.');
-  }
+    if (captainUpdate.count === 0) {
+      throw new AppError('INVALID_STATE', 409, 'Captain is no longer available');
+    }
 
-  // Update captain status to ON_RIDE
-  await prisma.captain.update({
-    where: { id: captain.id },
-    data: { status: CaptainStatus.ON_RIDE },
+    const rideUpdate = await tx.ride.updateMany({
+      where: {
+        id: rideId,
+        status: RideStatus.SEARCHING,
+        version: ride.version,
+      },
+      data: {
+        status: RideStatus.CAPTAIN_ASSIGNED,
+        captainId: captain.id,
+        assignedAt: new Date(),
+        version: ride.version + 1,
+      },
+    });
+
+    if (rideUpdate.count === 0) {
+      // Rollback captain ON_RIDE update
+      throw new AppError('CONCURRENCY_ERROR', 409, 'Ride was accepted by someone else or cancelled.');
+    }
   });
 
   // Cache assignment in Redis for real-time location validation (24h TTL)
@@ -291,6 +336,17 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
     await redisClient.set(`ride_assignment:${captainUserId}`, rideId, {
       EX: 86400 // 24 hours
     });
+  }
+
+  // Cancel the BullMQ 2-minute fallback job since captain is now assigned
+  try {
+    const { rideQueue } = await import('../jobs/rideQueue');
+    const job = await rideQueue.getJob(`cancel-timeout-${rideId}`);
+    if (job) {
+      await job.remove();
+    }
+  } catch (err) {
+    console.error(`Error removing cancel-timeout job for ride ${rideId}:`, err);
   }
 
   const updatedRide = await prisma.ride.findUnique({ 
@@ -324,6 +380,35 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
   return updatedRide;
 };
 
+export const cancelRideBySystem = async (rideId: string, reason: string) => {
+  const updatedCount = await prisma.ride.updateMany({
+    where: {
+      id: rideId,
+      status: RideStatus.SEARCHING,
+    },
+    data: {
+      status: RideStatus.CANCELLED,
+      cancellationReason: reason,
+      cancelledBy: 'SYSTEM',
+      cancelledAt: new Date(),
+      version: { increment: 1 },
+    },
+  });
+
+  if (updatedCount.count > 0) {
+    try {
+      const io = getIO();
+      const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+      io.to(`ride:${rideId}`).emit('ride:cancelled', { reason });
+      if (ride?.riderId) {
+        io.to(`rider:${ride.riderId}`).emit('ride:cancelled', { reason });
+      }
+    } catch (err) {
+      console.error('Socket broadcast error on system cancellation:', err);
+    }
+  }
+};
+
 export const rejectRide = async (rideId: string, captainUserId: string) => {
   const captain = await prisma.captain.findUnique({ where: { userId: captainUserId } });
   if (!captain) {
@@ -353,15 +438,26 @@ export const rejectRide = async (rideId: string, captainUserId: string) => {
   // Re-broadcast to other eligible captains (the rejection filter will exclude this captain)
   // Only re-broadcast if the ride is still SEARCHING
   if (ride.status === RideStatus.SEARCHING) {
-    startMatchingForRide(
-      rideId,
-      ride.pickupLat,
-      ride.pickupLng,
-      ride.destinationLat,
-      ride.destinationLng,
-      ride.estimatedFare,
-      ride.estimatedDistanceM,
-    ).catch(err => console.error('Re-broadcast after rejection failed:', err));
+    const rejectionCount = await prisma.rideRejection.count({ where: { rideId: ride.id } });
+    const MAX_BROADCAST_ROUNDS = 3;
+
+    if (rejectionCount >= MAX_BROADCAST_ROUNDS) {
+      await cancelRideBySystem(ride.id, 'MAX_REJECTIONS_REACHED');
+      return { success: true };
+    }
+
+    // Exponential back-off to prevent thundering herd
+    setTimeout(() => {
+      startMatchingForRide(
+        rideId,
+        ride.pickupLat,
+        ride.pickupLng,
+        ride.destinationLat,
+        ride.destinationLng,
+        ride.estimatedFare,
+        ride.estimatedDistanceM
+      ).catch(err => console.error('Re-broadcast after rejection failed:', err));
+    }, 500 * rejectionCount);
   }
 
   return { success: true };
@@ -421,8 +517,8 @@ export const startRide = async (rideId: string, captainUserId: string) => {
     throw new AppError('UNAUTHORIZED', 403, 'You are not assigned to this ride');
   }
 
-  if (ride.status !== RideStatus.CAPTAIN_ARRIVED) {
-    throw new AppError('INVALID_STATE', 409, `Cannot start from status ${ride.status}. Captain must arrive first.`);
+  if (ride.status !== RideStatus.CAPTAIN_ARRIVED && ride.status !== RideStatus.CAPTAIN_ASSIGNED) {
+    throw new AppError('INVALID_STATE', 409, `Cannot start from status ${ride.status}`);
   }
 
   const updatedCount = await prisma.ride.updateMany({

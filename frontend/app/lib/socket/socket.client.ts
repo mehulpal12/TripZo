@@ -7,6 +7,7 @@ class SocketClient {
   private url = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
 
   connect() {
+    if (typeof window === "undefined") return null;
     if (this.socket) return this.socket;
 
     const token = Cookies.get("token");
@@ -35,6 +36,10 @@ class SocketClient {
 
     this.socket.io.on("reconnect_attempt", () => {
       useSocketStore.getState().setReconnecting(true);
+      const currentToken = Cookies.get("token");
+      if (currentToken && this.socket) {
+        this.socket.auth = { token: currentToken };
+      }
     });
 
     this.socket.on("connect_error", (error) => {

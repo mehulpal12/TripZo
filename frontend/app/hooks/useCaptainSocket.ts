@@ -22,7 +22,7 @@ export function useCaptainSocket() {
     if (!socket) return;
 
     // Listen for new ride requests
-    socket.on("ride:new", (rideData: any) => {
+    const handleNewRide = (rideData: any) => {
       console.log("New ride request received:", rideData);
       // Map backend payload to frontend Ride interface
       setActiveRequest({
@@ -30,14 +30,16 @@ export function useCaptainSocket() {
         status: "SEARCHING",
         pickup: rideData.pickup,
         destination: rideData.destination,
-        vehicleType: "BIKE", // default assumption for now
+        vehicleType: rideData.vehicleType || "BIKE",
         fare: rideData.estimatedFare,
       });
-    });
+    };
+
+    socket.on("ride:new", handleNewRide);
 
     // Cleanup
     return () => {
-      socket.off("ride:new");
+      socket.off("ride:new", handleNewRide);
     };
   }, [isOnline, setActiveRequest]);
 

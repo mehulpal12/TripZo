@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 
 export const hashPassword = async (password: string): Promise<string> => {
-  const salt = await bcrypt.genSalt(10);
+  const salt = await bcrypt.genSalt(12);
   return bcrypt.hash(password, salt);
 };
 

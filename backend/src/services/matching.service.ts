@@ -25,30 +25,27 @@ export const getNearbyCaptains = async (
   }
 
   // 1.5 Lazy TTL Cleanup: Filter out stale captains (no location updates in the last 5 minutes)
+  const timestamps = await redisClient.hmGet('captain_location_meta', nearbyMembers);
   const staleThreshold = Date.now() - (5 * 60 * 1000);
   const activeMembers: string[] = [];
   const staleMembers: string[] = [];
 
-  for (const member of nearbyMembers) {
-    const timestampStr = await redisClient.hGet('captain_location_meta', member);
-    if (!timestampStr) {
-      staleMembers.push(member);
-      continue;
-    }
-    const timestamp = parseInt(timestampStr, 10);
-    if (timestamp < staleThreshold) {
+  nearbyMembers.forEach((member, i) => {
+    const ts = timestamps[i];
+    if (!ts || parseInt(ts, 10) < staleThreshold) {
       staleMembers.push(member);
     } else {
       activeMembers.push(member);
     }
-  }
+  });
 
   // Asynchronously clean up stale members from Redis to keep the GEO set fresh
   if (staleMembers.length > 0) {
-    Promise.all([
-      redisClient.zRem('captain_locations', staleMembers),
-      redisClient.hDel('captain_location_meta', staleMembers)
-    ]).catch(err => console.error("Failed to clean up stale captain locations in Redis:", err));
+    redisClient.multi()
+      .zRem('captain_locations', staleMembers)
+      .hDel('captain_location_meta', staleMembers)
+      .exec()
+      .catch(err => console.error("Failed to clean up stale captain locations in Redis:", err));
   }
 
   if (activeMembers.length === 0) {

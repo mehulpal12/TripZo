@@ -5,7 +5,9 @@ import { AppError } from '../errors/AppError';
 import { Role } from '@prisma/client';
 import crypto from 'crypto';
 import ms from 'ms';
+import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { redisClient } from '../config/redis';
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -146,6 +148,19 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
       await prisma.refreshSession.deleteMany({
         where: { token: refreshToken },
       });
+    }
+
+    // Revoke current access token via Redis denylist
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    if (token && redisClient.isReady) {
+      const decoded = jwt.decode(token) as any;
+      if (decoded && decoded.exp) {
+        const ttl = Math.max(0, decoded.exp - Math.floor(Date.now() / 1000));
+        if (ttl > 0) {
+          await redisClient.set(`denylist:${token}`, '1', { EX: ttl });
+        }
+      }
     }
 
     res.status(200).json({ success: true, message: 'Logged out successfully' });

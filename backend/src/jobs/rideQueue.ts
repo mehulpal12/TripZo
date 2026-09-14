@@ -4,6 +4,7 @@ import { env } from '../config/env';
 import { prisma } from '../config/db';
 import { RideStatus } from '@prisma/client';
 import { startMatchingForRide } from '../services/ride.service';
+import { logger } from '../utils/logger';
 
 // Create a dedicated Redis connection for BullMQ
 // Upstash Redis requires TLS when used with ioredis, typically family 0 handles it
@@ -11,6 +12,9 @@ const connection = new Redis(env.REDIS_URL, {
   maxRetriesPerRequest: null,
   tls: env.REDIS_URL.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined,
 });
+
+connection.on('error', (err) => logger.error('BullMQ Redis error', err));
+connection.on('connect', () => logger.info('BullMQ Redis connected'));
 
 // Create Queue
 export const rideQueue = new Queue('scheduled-rides-queue', { connection });
@@ -96,17 +100,29 @@ export const rideWorker = new Worker(
       const missedRides = await prisma.ride.findMany({
         where: {
           status: RideStatus.SCHEDULED,
-          scheduledAt: { lte: pastTime }
-        }
+          scheduledAt: { lte: pastTime },
+        },
       });
 
       for (const missed of missedRides) {
-        console.warn(`Reconciliation found missed scheduled ride ${missed.id}, enqueuing...`);
-        await rideQueue.add('startMatching', { rideId: missed.id }, { jobId: `recover-${missed.id}` });
+        const existingJob = await rideQueue.getJob(`startMatching-${missed.id}`);
+        const existingRecovery = await rideQueue.getJob(`recover-${missed.id}`);
+        if (!existingJob && !existingRecovery) {
+          console.warn(`Reconciliation found missed scheduled ride ${missed.id}, enqueuing...`);
+          await rideQueue.add(
+            'startMatching',
+            { rideId: missed.id },
+            { jobId: `recover-${missed.id}` }
+          );
+        }
       }
     }
   },
-  { connection }
+  {
+    connection,
+    concurrency: 5,
+    limiter: { max: 20, duration: 10_000 },
+  }
 );
 
 rideWorker.on('completed', (job) => {
@@ -117,13 +133,16 @@ rideWorker.on('failed', (job, err) => {
   console.error(`Job ${job?.id} has failed with ${err.message}`);
 });
 
-// Initialize reconciliation job to run every 5 minutes
+// Initialize distributed-safe reconciliation job to run every 5 minutes
 export const initReconciliationJob = async () => {
-  // Run immediately on boot
-  await rideQueue.add('reconciliation', {}, { jobId: `reconciliation-${Date.now()}` });
-  
-  // Then run every 5 minutes
-  setInterval(async () => {
-    await rideQueue.add('reconciliation', {}, { jobId: `reconciliation-${Date.now()}` });
-  }, 5 * 60 * 1000);
+  // Upsert a distributed-safe job scheduler (BullMQ v6 API)
+  // This is natively idempotent across all server pods
+  await rideQueue.upsertJobScheduler(
+    'reconciliation-singleton',
+    { every: 5 * 60 * 1000 },
+    {
+      name: 'reconciliation',
+      data: {},
+    }
+  );
 };

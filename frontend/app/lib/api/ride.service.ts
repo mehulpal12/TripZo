@@ -5,6 +5,7 @@ export interface LocationData {
   lat: number;
   lng: number;
   address?: string;
+  name?: string;
 }
 
 export interface FareEstimateDTO {
@@ -28,10 +29,14 @@ export const mapBackendRideToFrontend = (backendRide: any): Ride => {
     pickup: {
       lat: Number(backendRide.pickupLat),
       lng: Number(backendRide.pickupLng),
+      address: backendRide.pickupAddress || backendRide.pickup?.address,
+      name: backendRide.pickupName || backendRide.pickup?.name,
     },
     destination: {
       lat: Number(backendRide.destinationLat),
       lng: Number(backendRide.destinationLng),
+      address: backendRide.destinationAddress || backendRide.destination?.address,
+      name: backendRide.destinationName || backendRide.destination?.name,
     },
   };
 };

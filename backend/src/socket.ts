@@ -5,10 +5,11 @@ import { env } from './config/env';
 import { TokenPayload } from './utils/crypto';
 import { redisClient } from './config/redis';
 import { createAdapter } from '@socket.io/redis-adapter';
+import { prisma } from './config/db';
 
 let io: SocketIOServer;
 
-export const initializeSocket = (httpServer: HttpServer) => {
+export const initializeSocket = async (httpServer: HttpServer) => {
   io = new SocketIOServer(httpServer, {
     cors: {
       origin: '*', // Adjust for production
@@ -19,14 +20,16 @@ export const initializeSocket = (httpServer: HttpServer) => {
   // Configure Redis Adapter for horizontal scaling
   const pubClient = redisClient.duplicate();
   const subClient = redisClient.duplicate();
-  Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+  try {
+    await Promise.all([pubClient.connect(), subClient.connect()]);
     io.adapter(createAdapter(pubClient, subClient));
-  }).catch(err => {
+  } catch (err) {
     console.error('Failed to initialize Redis Adapter:', err);
-  });
+    throw err;
+  }
 
   // Authentication middleware
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     let token = socket.handshake.auth.token;
     if (!token && socket.handshake.headers.authorization) {
       token = socket.handshake.headers.authorization.replace(/^Bearer\s+/i, '').trim();
@@ -34,6 +37,17 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
     if (!token) {
       return next(new Error('Authentication error'));
+    }
+
+    if (redisClient.isReady) {
+      try {
+        const isDenied = await redisClient.get(`denylist:${token}`);
+        if (isDenied) {
+          return next(new Error('Token has been revoked'));
+        }
+      } catch (err) {
+        console.error('Error checking token denylist:', err);
+      }
     }
 
     jwt.verify(token, env.JWT_ACCESS_SECRET, (err: any, decoded: any) => {
@@ -58,10 +72,28 @@ export const initializeSocket = (httpServer: HttpServer) => {
       socket.join(`rider:${user.userId}`);
     }
 
-    // Join ride room if requested
-    socket.on('join_ride', (rideId: string) => {
-      socket.join(`ride:${rideId}`);
-      console.log(`User ${user.userId} joined ride room: ride:${rideId}`);
+    // Join ride room if requested (authorized)
+    socket.on('join_ride', async (rideId: string) => {
+      try {
+        const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+        if (!ride) return socket.emit('error', { code: 'RIDE_NOT_FOUND' });
+
+        const captainProfile = user.role === 'CAPTAIN'
+          ? await prisma.captain.findUnique({ where: { userId: user.userId } })
+          : null;
+
+        const isParticipant =
+          (user.role === 'RIDER' && ride.riderId === user.userId) ||
+          (user.role === 'CAPTAIN' && captainProfile?.id === ride.captainId);
+
+        if (!isParticipant) return socket.emit('error', { code: 'UNAUTHORIZED' });
+
+        socket.join(`ride:${rideId}`);
+        console.log(`User ${user.userId} joined ride room: ride:${rideId}`);
+      } catch (err) {
+        console.error(`Error in join_ride for user ${user.userId}:`, err);
+        socket.emit('error', { code: 'INTERNAL_ERROR' });
+      }
     });
 
     // Receive captain location and update Redis GEO
@@ -90,15 +122,15 @@ export const initializeSocket = (httpServer: HttpServer) => {
             return; // Reject older event
         }
         
-        // Write to Redis
-        await Promise.all([
-            redisClient.geoAdd('captain_locations', {
+        // Atomic write to Redis GEO and metadata hash via MULTI transaction
+        await redisClient.multi()
+            .geoAdd('captain_locations', {
                 longitude: lng,
                 latitude: lat,
                 member: user.userId,
-            }),
-            redisClient.hSet('captain_location_meta', user.userId, timestamp.toString())
-        ]);
+            })
+            .hSet('captain_location_meta', user.userId, timestamp.toString())
+            .exec();
 
         // Broadcast to ride room if active
         if (rideId) {
@@ -117,12 +149,13 @@ export const initializeSocket = (httpServer: HttpServer) => {
       console.log(`Socket disconnected: ${socket.id} (User: ${user.userId})`);
       // If captain disconnects, remove from GEO and reset DB status to OFFLINE
       if (user.role === 'CAPTAIN') {
-        // Clean up Redis GEO
+        // Atomic clean up of Redis GEO and metadata hash
         if (redisClient.isReady) {
-          Promise.all([
-            redisClient.zRem('captain_locations', user.userId),
-            redisClient.hDel('captain_location_meta', user.userId)
-          ]).catch(console.error);
+          redisClient.multi()
+            .zRem('captain_locations', user.userId)
+            .hDel('captain_location_meta', user.userId)
+            .exec()
+            .catch(console.error);
         }
         // Reset DB status to OFFLINE so captain doesn't appear available when gone
         try {

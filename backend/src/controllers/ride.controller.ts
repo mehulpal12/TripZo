@@ -86,6 +86,7 @@ export const createImmediateRide = async (req: Request, res: Response, next: Nex
       estimatedDistanceM: fare.estimatedDistanceM,
       estimatedDurationS: fare.estimatedDurationS,
       estimatedFare: fare.estimatedFare,
+      vehicleType: vehicleType || 'BIKE',
     });
 
     res.status(201).json({
@@ -116,25 +117,75 @@ export const getRide = async (req: Request, res: Response, next: NextFunction) =
 export const getRideHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, role } = req.user!;
-    // MVP implementation: just return rides where riderId = userId for Riders
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
     if (role === 'RIDER') {
-      const rides = await prisma.ride.findMany({
-        where: { riderId: userId },
-        orderBy: { createdAt: 'desc' },
-      });
+      const [rides, total] = await Promise.all([
+        prisma.ride.findMany({
+          where: { riderId: userId },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          include: {
+            captain: {
+              include: {
+                user: {
+                  select: { name: true, phone: true },
+                },
+              },
+            },
+          },
+        }),
+        prisma.ride.count({ where: { riderId: userId } }),
+      ]);
+
       res.status(200).json({
         success: true,
         data: rides,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       });
     } else {
-      // For Captains, return rides where they are assigned
-      const rides = await prisma.ride.findMany({
-        where: { captainId: userId },
-        orderBy: { createdAt: 'desc' },
-      });
+      // For Captains, resolve Captain.id from User.id
+      const captain = await prisma.captain.findUnique({ where: { userId } });
+      if (!captain) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+        });
+      }
+
+      const [rides, total] = await Promise.all([
+        prisma.ride.findMany({
+          where: { captainId: captain.id },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          include: {
+            rider: {
+              select: { name: true, phone: true, email: true },
+            },
+          },
+        }),
+        prisma.ride.count({ where: { captainId: captain.id } }),
+      ]);
+
       res.status(200).json({
         success: true,
         data: rides,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       });
     }
   } catch (error) {
