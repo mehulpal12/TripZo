@@ -4,14 +4,39 @@ import { useEffect, useRef } from "react";
 import { socketClient } from "@/lib/socket/socket.client";
 import { useCaptainStore } from "@/stores/captain.store";
 
-// Base location for captain (Near Delhi Center, within 5km of rider's default)
-const BASE_LAT = 28.7031;
-const BASE_LNG = 77.1030;
+// Helper: Calculate distance in meters between two lat/lng pairs (Haversine formula)
+function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
 
 export function useCaptainSocket() {
-  const { isOnline, activeRide, setActiveRequest, setCaptainLocation } = useCaptainStore();
-  const locationRef = useRef({ lat: BASE_LAT, lng: BASE_LNG });
+  const {
+    isOnline,
+    activeRide,
+    setActiveRequest,
+    setCaptainLocation,
+    setLocationError,
+    setIsGpsActive,
+  } = useCaptainStore();
 
+  const activeRideRef = useRef(activeRide);
+  activeRideRef.current = activeRide;
+
+  const lastEmitTimeRef = useRef<number>(0);
+  const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // 1. Socket.IO Connection & Event Handlers
   useEffect(() => {
     if (!isOnline) {
       socketClient.disconnect();
@@ -21,10 +46,9 @@ export function useCaptainSocket() {
     const socket = socketClient.connect();
     if (!socket) return;
 
-    // Listen for new ride requests
+    // Listen for incoming ride dispatch requests
     const handleNewRide = (rideData: any) => {
-      console.log("New ride request received:", rideData);
-      // Map backend payload to frontend Ride interface
+      console.log("New ride request received via socket:", rideData);
       setActiveRequest({
         id: rideData.rideId,
         status: "SEARCHING",
@@ -37,69 +61,105 @@ export function useCaptainSocket() {
 
     socket.on("ride:new", handleNewRide);
 
-    // Cleanup
     return () => {
       socket.off("ride:new", handleNewRide);
     };
   }, [isOnline, setActiveRequest]);
 
-  // GPS Simulator Loop
+  // 2. Real-Time Browser Geolocation Watcher (navigator.geolocation.watchPosition)
   useEffect(() => {
-    if (!isOnline) return;
-
-    // Immediately emit and set initial location so map has captain coordinates without waiting for first interval
-    const initialLoc = { lat: locationRef.current.lat, lng: locationRef.current.lng };
-    setCaptainLocation(initialLoc);
-
-    const socket = socketClient.getSocket();
-    if (socket?.connected) {
-      socket.emit("captain:location", {
-        lat: initialLoc.lat,
-        lng: initialLoc.lng,
-        timestamp: Date.now(),
-        ...(activeRide && { rideId: activeRide.id }),
-      });
+    if (!isOnline) {
+      setLocationError(null);
+      setIsGpsActive(false);
+      return;
     }
 
-    const interval = setInterval(() => {
-      // If we have an active ride, simulate moving towards pickup/dropoff
-      if (activeRide) {
-        let targetLat, targetLng;
-        if (activeRide.status === "CAPTAIN_ASSIGNED" || activeRide.status === "CAPTAIN_ARRIVING") {
-          // Move to pickup
-          targetLat = activeRide.pickup.lat;
-          targetLng = activeRide.pickup.lng;
-        } else if (activeRide.status === "IN_PROGRESS") {
-          // Move to dropoff
-          targetLat = activeRide.destination.lat;
-          targetLng = activeRide.destination.lng;
-        }
+    if (typeof window === "undefined" || !("geolocation" in navigator)) {
+      setLocationError("Geolocation is not supported by your browser.");
+      setIsGpsActive(false);
+      return;
+    }
 
-        if (targetLat && targetLng) {
-          // Very basic linear interpolation (move 5% closer every 2 seconds)
-          locationRef.current.lat += (targetLat - locationRef.current.lat) * 0.05;
-          locationRef.current.lng += (targetLng - locationRef.current.lng) * 0.05;
-        }
-      } else {
-        // Idle wander
-        locationRef.current.lat += (Math.random() - 0.5) * 0.0001;
-        locationRef.current.lng += (Math.random() - 0.5) * 0.0001;
+    let watchId: number | null = null;
+
+    const handleSuccess = (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+
+      if (!isFinite(latitude) || !isFinite(longitude)) {
+        return;
       }
 
-      const loc = { lat: locationRef.current.lat, lng: locationRef.current.lng };
-      setCaptainLocation(loc);
+      setIsGpsActive(true);
+      setLocationError(null);
+      setCaptainLocation({ lat: latitude, lng: longitude });
 
-      const currentSocket = socketClient.getSocket();
-      if (currentSocket?.connected) {
-        currentSocket.emit("captain:location", {
-          lat: loc.lat,
-          lng: loc.lng,
-          timestamp: Date.now(),
-          ...(activeRide && { rideId: activeRide.id }),
-        });
+      const now = Date.now();
+      const lastEmit = lastEmitTimeRef.current;
+      const lastPos = lastPosRef.current;
+
+      let distanceMoved = 0;
+      if (lastPos) {
+        distanceMoved = getDistanceMeters(lastPos.lat, lastPos.lng, latitude, longitude);
       }
-    }, 2000);
 
-    return () => clearInterval(interval);
-  }, [isOnline, activeRide, setCaptainLocation]);
+      // Throttle GPS emits:
+      // Emit if:
+      // - First valid position, OR
+      // - At least 1.5 seconds have passed, OR
+      // - At least 800ms have passed AND position moved >= 5 meters
+      const shouldEmit =
+        !lastPos ||
+        now - lastEmit >= 1500 ||
+        (now - lastEmit >= 800 && distanceMoved >= 5);
+
+      if (shouldEmit) {
+        lastEmitTimeRef.current = now;
+        lastPosRef.current = { lat: latitude, lng: longitude };
+
+        const socket = socketClient.getSocket();
+        if (socket?.connected) {
+          const currentRide = activeRideRef.current;
+          socket.emit("captain:location", {
+            lat: latitude,
+            lng: longitude,
+            timestamp: now,
+            ...(currentRide && { rideId: currentRide.id }),
+          });
+        }
+      }
+    };
+
+    const handleError = (error: GeolocationPositionError) => {
+      setIsGpsActive(false);
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          setLocationError(
+            "GPS location permission denied. Please allow location access in your browser to broadcast your position."
+          );
+          break;
+        case error.POSITION_UNAVAILABLE:
+          setLocationError("GPS location unavailable. Please check your device location settings.");
+          break;
+        case error.TIMEOUT:
+          setLocationError("GPS location request timed out. Acquiring signal...");
+          break;
+        default:
+          setLocationError(`Location error: ${error.message}`);
+          break;
+      }
+    };
+
+    watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+      timeout: 10000,
+    });
+
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      setIsGpsActive(false);
+    };
+  }, [isOnline, setCaptainLocation, setLocationError, setIsGpsActive]);
 }

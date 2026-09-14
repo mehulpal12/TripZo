@@ -112,7 +112,10 @@ export const startMatchingForRide = async (
   const dist = Number(estimatedDistanceM);
 
   const io = getIO();
-  const radiusKm = 5; // Search radius
+  // Configurable search radius: 50km in development for local testing, 5km in production
+  const radiusKm = process.env.MATCHING_RADIUS_KM
+    ? parseFloat(process.env.MATCHING_RADIUS_KM)
+    : (process.env.NODE_ENV === 'production' ? 5 : 50);
   const nearbyCaptains = await getNearbyCaptains(rideId, pLat, pLng, radiusKm, vehicleType);
 
   if (nearbyCaptains.length > 0) {

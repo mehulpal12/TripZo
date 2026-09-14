@@ -102,43 +102,84 @@ export const initializeSocket = async (httpServer: HttpServer) => {
 
       try {
         if (!redisClient.isReady) {
-            console.error('Redis client not ready to receive location');
-            return;
+          console.error('Redis client not ready to receive location');
+          return;
         }
 
         const { rideId, lat, lng, timestamp = Date.now() } = data;
 
-        // If they provide a rideId, validate assignment
-        if (rideId) {
-            const assignedRide = await redisClient.get(`ride_assignment:${user.userId}`);
-            if (assignedRide !== rideId) {
-                return; // Unauthorized or stale broadcast
-            }
+        // 1. Strict Coordinate Validation
+        if (
+          typeof lat !== 'number' ||
+          typeof lng !== 'number' ||
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lng) ||
+          lat < -90 ||
+          lat > 90 ||
+          lng < -180 ||
+          lng > 180
+        ) {
+          console.warn(`[Socket] Invalid coordinates received from captain ${user.userId}: lat=${lat}, lng=${lng}`);
+          return;
         }
 
-        // Stale location protection
+        // 2. Resolve and Validate Active Ride Assignment
+        let targetRideId = rideId;
+        if (!targetRideId) {
+          const cachedAssignment = await redisClient.get(`ride_assignment:${user.userId}`);
+          if (cachedAssignment) {
+            targetRideId = cachedAssignment;
+          }
+        } else {
+          const assignedRide = await redisClient.get(`ride_assignment:${user.userId}`);
+          if (assignedRide !== targetRideId) {
+            // Fallback: check database if Redis assignment key was evicted
+            const captainProfile = await prisma.captain.findUnique({ where: { userId: user.userId } });
+            if (captainProfile) {
+              const activeDbRide = await prisma.ride.findFirst({
+                where: {
+                  id: targetRideId,
+                  captainId: captainProfile.id,
+                  status: {
+                    in: ['CAPTAIN_ASSIGNED', 'CAPTAIN_ARRIVING', 'CAPTAIN_ARRIVED', 'IN_PROGRESS'],
+                  },
+                },
+              });
+
+              if (activeDbRide) {
+                await redisClient.set(`ride_assignment:${user.userId}`, targetRideId, { EX: 86400 });
+              } else {
+                return; // Unauthorized or stale broadcast
+              }
+            } else {
+              return;
+            }
+          }
+        }
+
+        // 3. Stale Location Protection
         const storedTimestamp = await redisClient.hGet('captain_location_meta', user.userId);
         if (storedTimestamp && timestamp <= parseInt(storedTimestamp, 10)) {
-            return; // Reject older event
+          return; // Reject older event
         }
-        
-        // Atomic write to Redis GEO and metadata hash via MULTI transaction
-        await redisClient.multi()
-            .geoAdd('captain_locations', {
-                longitude: lng,
-                latitude: lat,
-                member: user.userId,
-            })
-            .hSet('captain_location_meta', user.userId, timestamp.toString())
-            .exec();
 
-        // Broadcast to ride room if active
-        if (rideId) {
-            io.to(`ride:${rideId}`).emit('captain:location', {
-                lat,
-                lng,
-                timestamp
-            });
+        // 4. Atomic Write to Redis GEO and Metadata
+        await redisClient.multi()
+          .geoAdd('captain_locations', {
+            longitude: lng,
+            latitude: lat,
+            member: user.userId,
+          })
+          .hSet('captain_location_meta', user.userId, timestamp.toString())
+          .exec();
+
+        // 5. Broadcast to Authorized Ride Room
+        if (targetRideId) {
+          io.to(`ride:${targetRideId}`).emit('captain:location', {
+            lat,
+            lng,
+            timestamp,
+          });
         }
       } catch (err) {
         console.error('Error updating captain location:', err);

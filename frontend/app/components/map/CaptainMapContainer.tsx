@@ -45,7 +45,7 @@ export function CaptainMapContainer() {
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });
 
-  const { isOnline, activeRequest, activeRide, captainLocation } = useCaptainStore();
+  const { isOnline, activeRequest, activeRide, captainLocation, locationError, isGpsActive } = useCaptainStore();
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
@@ -404,12 +404,33 @@ export function CaptainMapContainer() {
         <div className="absolute top-3 left-3 z-30 pointer-events-none">
           <div className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#111111]/90 backdrop-blur-md text-white border border-slate-700 shadow-xl">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFD600] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FFD600]"></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                isGpsActive ? "bg-[#FFD600]" : "bg-amber-400"
+              }`}></span>
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                isGpsActive ? "bg-[#FFD600]" : "bg-amber-400"
+              }`}></span>
             </span>
             <span className="text-xs font-black tracking-wide text-slate-200 uppercase">
-              Live GPS Active · Searching for rides
+              {isGpsActive
+                ? "Live GPS Active · Searching for rides"
+                : locationError
+                ? "GPS Signal Blocked"
+                : "Acquiring GPS Signal..."}
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* GPS Warning / Error Notification Banner */}
+      {isOnline && locationError && (
+        <div className="absolute top-16 left-3 right-3 z-30 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-2.5 p-3 rounded-xl bg-rose-950/95 border border-rose-500/50 text-white shadow-2xl backdrop-blur-md">
+            <span className="material-symbols-outlined text-rose-400 text-xl flex-shrink-0">location_off</span>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-rose-200">{locationError}</span>
+              <span className="text-[11px] text-rose-300/80">Click your browser address bar's site settings to allow location permissions.</span>
+            </div>
           </div>
         </div>
       )}

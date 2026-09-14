@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRideStore } from "@/stores/ride.store";
 import { rideService } from "@/lib/api/ride.service";
+import { MOCK_RIDER_LOCATION, MOCK_DESTINATION_LOCATION } from "@/config/mockLocation";
 import { MapPin, Navigation, Bike, Car, Loader2 } from "lucide-react";
 
 export function BookingPanel() {
@@ -13,26 +14,27 @@ export function BookingPanel() {
   const [loading, setLoading] = useState(false);
   const [fareEstimate, setFareEstimate] = useState<number | null>(null);
 
-  // Hardcoded for demo purposes since we don't have Places API hooked up
+  // Configurable mock location for development / testing scenarios
   const handleSelectPickup = () => {
-    setPickup({ lat: 28.7041, lng: 77.1025, address: "Delhi Center" });
+    setPickup(MOCK_RIDER_LOCATION);
   };
 
   const handleSelectDestination = () => {
-    setDestination({ lat: 28.5355, lng: 77.3910, address: "Noida Sector 62" });
-    fetchFare();
+    setDestination(MOCK_DESTINATION_LOCATION);
+    fetchFare(MOCK_DESTINATION_LOCATION);
   };
 
-  const fetchFare = async () => {
-    if (!pickup) return;
+  const fetchFare = async (dest = destination) => {
+    const currentPickup = pickup || MOCK_RIDER_LOCATION;
+    const targetDest = dest || MOCK_DESTINATION_LOCATION;
     try {
       setLoading(true);
       const res = await rideService.getFareEstimate({
-        pickupLat: pickup.lat,
-        pickupLng: pickup.lng,
-        destinationLat: 28.5355,
-        destinationLng: 77.3910,
-        vehicleType
+        pickupLat: currentPickup.lat,
+        pickupLng: currentPickup.lng,
+        destinationLat: targetDest.lat,
+        destinationLng: targetDest.lng,
+        vehicleType,
       });
       setFareEstimate(res.estimatedFare);
     } catch (err) {
