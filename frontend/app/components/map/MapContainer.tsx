@@ -35,10 +35,13 @@ const mapOptions: google.maps.MapOptions = {
   ],
 };
 
+import { GOOGLE_MAPS_LIBRARIES } from "@/config/maps";
+
 export default function MapContainer() {
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   const { pickup, destination, activeRide } = useRideStore();
@@ -243,11 +246,10 @@ export default function MapContainer() {
           {/* Interactive State Selector Bar (Top Right) */}
           <div className="absolute top-space-md right-space-md z-30 flex flex-wrap items-center gap-1 p-1 rounded-full bg-[#111111] border border-gray-800 shadow-xl">
             <span className="font-telemetry-sm text-[11px] text-gray-300 px-2 uppercase font-bold hidden sm:inline">State:</span>
-            <span className={`px-space-sm py-1 rounded-full font-label-sm text-xs font-black shadow-md ${
-              activeRide.status === 'IN_PROGRESS' 
-                ? 'bg-emerald-400 text-black' 
+            <span className={`px-space-sm py-1 rounded-full font-label-sm text-xs font-black shadow-md ${activeRide.status === 'IN_PROGRESS'
+                ? 'bg-emerald-400 text-black'
                 : 'bg-[#FFD600] text-[#111111]'
-            }`}>
+              }`}>
               {activeRide.status.replace(/_/g, ' ')}
             </span>
           </div>
@@ -281,9 +283,8 @@ export default function MapContainer() {
             <button
               onClick={() => setShowTraffic(prev => !prev)}
               aria-label="Traffic conditions"
-              className={`w-11 h-11 rounded-full border flex items-center justify-center shadow-xl transition-all ${
-                showTraffic ? 'bg-[#FFD600] text-black border-yellow-400' : 'bg-[#111111] text-white hover:text-[#FFD600] hover:bg-black border-gray-800'
-              }`}
+              className={`w-11 h-11 rounded-full border flex items-center justify-center shadow-xl transition-all ${showTraffic ? 'bg-[#FFD600] text-black border-yellow-400' : 'bg-[#111111] text-white hover:text-[#FFD600] hover:bg-black border-gray-800'
+                }`}
               type="button"
               title="Toggle Traffic Conditions"
             >

@@ -40,10 +40,13 @@ const mapOptions: google.maps.MapOptions = {
   ],
 };
 
+import { GOOGLE_MAPS_LIBRARIES } from "@/config/maps";
+
 export function CaptainMapContainer() {
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   const { isOnline, activeRequest, activeRide, captainLocation, locationError, isGpsActive } = useCaptainStore();
@@ -156,7 +159,7 @@ export function CaptainMapContainer() {
     }
 
     const routeKey = `${navState.phase}_${navState.targetLocation.lat}_${navState.targetLocation.lng}`;
-    
+
     // Only re-route if phase/target changes (prevents spamming Directions API on live GPS ticks)
     if (lastRoutedKeyRef.current === routeKey && directions) {
       return;
@@ -355,20 +358,18 @@ export function CaptainMapContainer() {
         <div className="absolute top-2 sm:top-3 left-2 sm:left-3 right-2 sm:right-3 z-30 flex flex-col gap-1.5 pointer-events-none">
           <div className="pointer-events-auto flex items-center justify-between p-2.5 sm:p-3.5 rounded-xl bg-[#111111]/95 backdrop-blur-md text-white border border-slate-700 shadow-2xl">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${
-                navState.phase === "DROPOFF" ? "bg-emerald-500 text-black" : "bg-[#FFD600] text-black"
-              }`}>
+              <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${navState.phase === "DROPOFF" ? "bg-emerald-500 text-black" : "bg-[#FFD600] text-black"
+                }`}>
                 <span className="material-symbols-outlined text-xl sm:text-2xl font-black">
                   {navState.phase === "DROPOFF" ? "navigation" : activeRide.status === "CAPTAIN_ARRIVED" ? "pin_drop" : "directions_bike"}
                 </span>
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wider uppercase border ${
-                    navState.phase === "DROPOFF" 
-                      ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40" 
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wider uppercase border ${navState.phase === "DROPOFF"
+                      ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40"
                       : "bg-yellow-950/80 text-yellow-300 border-yellow-500/40"
-                  }`}>
+                    }`}>
                     {navState.badge}
                   </span>
                   {navDistance && (
@@ -405,19 +406,17 @@ export function CaptainMapContainer() {
         <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-30 pointer-events-none">
           <div className="pointer-events-auto flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#111111]/90 backdrop-blur-md text-white border border-slate-700 shadow-xl">
             <span className="relative flex h-2 sm:h-2.5 w-2 sm:w-2.5">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                isGpsActive ? "bg-[#FFD600]" : "bg-amber-400"
-              }`}></span>
-              <span className={`relative inline-flex rounded-full h-2 sm:h-2.5 w-2 sm:w-2.5 ${
-                isGpsActive ? "bg-[#FFD600]" : "bg-amber-400"
-              }`}></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isGpsActive ? "bg-[#FFD600]" : "bg-amber-400"
+                }`}></span>
+              <span className={`relative inline-flex rounded-full h-2 sm:h-2.5 w-2 sm:w-2.5 ${isGpsActive ? "bg-[#FFD600]" : "bg-amber-400"
+                }`}></span>
             </span>
             <span className="text-[10px] sm:text-xs font-black tracking-wide text-slate-200 uppercase">
               {isGpsActive
                 ? "Live GPS Active · Searching for rides"
                 : locationError
-                ? "GPS Signal Blocked"
-                : "Acquiring GPS Signal..."}
+                  ? "GPS Signal Blocked"
+                  : "Acquiring GPS Signal..."}
             </span>
           </div>
         </div>
@@ -461,11 +460,10 @@ export function CaptainMapContainer() {
 
         <button
           onClick={() => setShowTraffic((prev) => !prev)}
-          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shadow-xl transition-all ${
-            showTraffic 
-              ? "bg-[#FFD600] text-black border-yellow-400 font-bold" 
+          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shadow-xl transition-all ${showTraffic
+              ? "bg-[#FFD600] text-black border-yellow-400 font-bold"
               : "bg-[#111111] hover:bg-slate-800 text-white hover:text-[#FFD600] border-slate-700"
-          }`}
+            }`}
           title="Toggle Live Traffic Conditions"
           type="button"
         >
@@ -521,7 +519,7 @@ export function CaptainMapContainer() {
                 <span className="material-symbols-outlined text-emerald-400">call</span>
                 <span className="font-bold text-sm">Contact Rider</span>
               </div>
-              <button 
+              <button
                 onClick={() => setShowContactModal(false)}
                 className="text-slate-400 hover:text-white"
               >
