@@ -46,7 +46,20 @@ export function useCaptainSocket() {
   // GPS Simulator Loop
   useEffect(() => {
     if (!isOnline) return;
+
+    // Immediately emit and set initial location so map has captain coordinates without waiting for first interval
+    const initialLoc = { lat: locationRef.current.lat, lng: locationRef.current.lng };
+    setCaptainLocation(initialLoc);
+
     const socket = socketClient.getSocket();
+    if (socket?.connected) {
+      socket.emit("captain:location", {
+        lat: initialLoc.lat,
+        lng: initialLoc.lng,
+        timestamp: Date.now(),
+        ...(activeRide && { rideId: activeRide.id }),
+      });
+    }
 
     const interval = setInterval(() => {
       // If we have an active ride, simulate moving towards pickup/dropoff
