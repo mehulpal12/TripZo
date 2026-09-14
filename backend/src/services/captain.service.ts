@@ -1,6 +1,6 @@
 import { prisma } from '../config/db';
 import { AppError } from '../errors/AppError';
-import { CaptainStatus } from '@prisma/client';
+import { CaptainStatus, RideStatus } from '@prisma/client';
 
 import { redisClient } from '../config/redis';
 
@@ -56,3 +56,103 @@ export const getCaptainAssignedRides = async (userId: string) => {
 
   return rides;
 };
+
+export const getCaptainRideHistory = async (
+  userId: string,
+  options: { page?: number; limit?: number; status?: string } = {}
+) => {
+  const captain = await prisma.captain.findUnique({
+    where: { userId },
+  });
+
+  if (!captain) {
+    throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain profile not found');
+  }
+
+  const page = Math.max(1, options.page || 1);
+  const limit = Math.min(50, Math.max(1, options.limit || 20));
+  const skip = (page - 1) * limit;
+
+  const whereClause: any = {
+    captainId: captain.id,
+  };
+
+  if (options.status && options.status !== 'ALL') {
+    whereClause.status = options.status as RideStatus;
+  }
+
+  const [rides, total] = await Promise.all([
+    prisma.ride.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      include: {
+        rider: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+    }),
+    prisma.ride.count({ where: whereClause }),
+  ]);
+
+  // Aggregate stats for Captain
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const [allCompletedRides, todayCompletedRides, cancelledCount] = await Promise.all([
+    prisma.ride.findMany({
+      where: {
+        captainId: captain.id,
+        status: RideStatus.COMPLETED,
+      },
+      select: { finalFare: true, estimatedFare: true },
+    }),
+    prisma.ride.findMany({
+      where: {
+        captainId: captain.id,
+        status: RideStatus.COMPLETED,
+        createdAt: { gte: startOfToday },
+      },
+      select: { finalFare: true, estimatedFare: true },
+    }),
+    prisma.ride.count({
+      where: {
+        captainId: captain.id,
+        status: RideStatus.CANCELLED,
+      },
+    }),
+  ]);
+
+  const totalEarnings = allCompletedRides.reduce(
+    (acc, r) => acc + Number(r.finalFare || r.estimatedFare || 0),
+    0
+  );
+  const todayEarnings = todayCompletedRides.reduce(
+    (acc, r) => acc + Number(r.finalFare || r.estimatedFare || 0),
+    0
+  );
+
+  return {
+    rides,
+    stats: {
+      totalEarnings,
+      todayEarnings,
+      completedTrips: allCompletedRides.length,
+      todayTrips: todayCompletedRides.length,
+      cancelledTrips: cancelledCount,
+    },
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+

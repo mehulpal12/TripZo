@@ -1,9 +1,10 @@
 "use client";
 
-import { useJsApiLoader, GoogleMap, Marker, DirectionsRenderer } from "@react-google-maps/api";
+import { GoogleMap, Marker, DirectionsRenderer } from "@react-google-maps/api";
 import { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { useRideStore } from "@/stores/ride.store";
 import { MOCK_RIDER_LOCATION } from "@/config/mockLocation";
+import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
 
 const containerStyle = {
   width: "100%",
@@ -35,14 +36,8 @@ const mapOptions: google.maps.MapOptions = {
   ],
 };
 
-import { GOOGLE_MAPS_LIBRARIES } from "@/config/maps";
-
 export default function MapContainer() {
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  const { isLoaded, loadError } = useGoogleMapsLoader();
 
   const { pickup, destination, activeRide } = useRideStore();
   const [map, setMap] = useState<google.maps.Map | null>(null);

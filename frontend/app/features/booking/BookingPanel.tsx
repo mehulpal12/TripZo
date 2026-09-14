@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useJsApiLoader } from "@react-google-maps/api";
+import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRideStore } from "@/stores/ride.store";
 import { rideService, LocationData } from "@/lib/api/ride.service";
 import { MOCK_RIDER_LOCATION, MOCK_DESTINATION_LOCATION } from "@/config/mockLocation";
-import { GOOGLE_MAPS_LIBRARIES } from "@/config/maps";
 import { MapPin, Navigation, Bike, Car, Loader2, Crosshair, X, Search } from "lucide-react";
 
 // Fallback landmarks across Delhi-NCR if Places API is idle
@@ -21,11 +20,7 @@ const DEFAULT_POPULAR_HUBS: (LocationData & { tag: string })[] = [
 ];
 
 export function BookingPanel() {
-  const { isLoaded } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  const { isLoaded } = useGoogleMapsLoader();
 
   const { pickup, destination, setPickup, setDestination, vehicleType, setVehicleType, setActiveRide } = useRideStore();
   const [loading, setLoading] = useState(false);

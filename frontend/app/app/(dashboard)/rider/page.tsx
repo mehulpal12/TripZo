@@ -1,12 +1,22 @@
 "use client";
 
-import MapContainer from "@/components/map/MapContainer";
+import dynamic from "next/dynamic";
 import { BookingPanel } from "@/features/booking/BookingPanel";
 import { ActiveRideSidebar } from "@/features/ride/ActiveRideSidebar";
 import { useRideStore } from "@/stores/ride.store";
 import { useEffect } from "react";
 import { socketClient } from "@/lib/socket/socket.client";
 import { useRiderSocket } from "@/hooks/useRiderSocket";
+
+const MapContainer = dynamic(() => import("@/components/map/MapContainer"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-slate-400 gap-3">
+      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <span className="text-xs font-mono uppercase tracking-widest text-slate-300">Loading Map...</span>
+    </div>
+  ),
+});
 
 export default function RiderDashboard() {
   const { activeRide } = useRideStore();
