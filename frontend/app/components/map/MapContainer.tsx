@@ -67,7 +67,7 @@ export default function MapContainer() {
 
   // Traffic layer toggle
   useEffect(() => {
-    if (!map || !window.google?.maps) return;
+    if (!map || typeof window === "undefined" || typeof window.google?.maps?.TrafficLayer !== "function") return;
     if (showTraffic) {
       if (!trafficLayerRef.current) {
         trafficLayerRef.current = new window.google.maps.TrafficLayer();
@@ -80,7 +80,13 @@ export default function MapContainer() {
 
   // Fetch directions between pickup and destination
   useEffect(() => {
-    if (!isLoaded || !window.google?.maps || !effectivePickup || !effectiveDestination) {
+    if (
+      !isLoaded ||
+      typeof window === "undefined" ||
+      typeof window.google?.maps?.DirectionsService !== "function" ||
+      !effectivePickup ||
+      !effectiveDestination
+    ) {
       setDirections(null);
       return;
     }
@@ -97,7 +103,7 @@ export default function MapContainer() {
         if (status === window.google.maps.DirectionsStatus.OK && result) {
           setDirections(result);
 
-          if (map) {
+          if (map && typeof window.google?.maps?.LatLngBounds === "function") {
             const bounds = new window.google.maps.LatLngBounds();
             bounds.extend(effectivePickup);
             bounds.extend(effectiveDestination);
@@ -113,7 +119,14 @@ export default function MapContainer() {
 
   // High-contrast self-contained SVG markers
   const riderMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
+    if (
+      !isLoaded ||
+      typeof window === "undefined" ||
+      typeof window.google?.maps?.Size !== "function" ||
+      typeof window.google?.maps?.Point !== "function"
+    ) {
+      return undefined;
+    }
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
         <circle cx="20" cy="20" r="17" fill="#111111" stroke="#FFD600" stroke-width="3"/>
@@ -129,7 +142,14 @@ export default function MapContainer() {
   }, [isLoaded]);
 
   const destMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
+    if (
+      !isLoaded ||
+      typeof window === "undefined" ||
+      typeof window.google?.maps?.Size !== "function" ||
+      typeof window.google?.maps?.Point !== "function"
+    ) {
+      return undefined;
+    }
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
         <circle cx="20" cy="20" r="17" fill="#111111" stroke="#10B981" stroke-width="3"/>
@@ -145,7 +165,14 @@ export default function MapContainer() {
   }, [isLoaded]);
 
   const captainMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
+    if (
+      !isLoaded ||
+      typeof window === "undefined" ||
+      typeof window.google?.maps?.Size !== "function" ||
+      typeof window.google?.maps?.Point !== "function"
+    ) {
+      return undefined;
+    }
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
         <circle cx="23" cy="23" r="21" fill="#111111" stroke="#FFD600" stroke-width="3.5"/>

@@ -10,11 +10,24 @@ let isScriptLoaded = false;
 let scriptLoadError: Error | null = null;
 
 /**
+ * Helper to check if Google Maps JS API and its core constructor classes are fully loaded.
+ */
+export function isGoogleMapsLoaded(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    Boolean(window.google?.maps) &&
+    typeof window.google.maps.Map === "function" &&
+    typeof window.google.maps.Size === "function" &&
+    typeof window.google.maps.Point === "function"
+  );
+}
+
+/**
  * Robust, SSR-safe Google Maps JavaScript API loader hook.
  *
  * Guarantees:
  * 1. Never executes during SSR (returns { isLoaded: false, loadError: undefined }).
- * 2. If window.google.maps is already available, returns { isLoaded: true } immediately.
+ * 2. If window.google.maps and core classes (Map, Size, Point) are already available, returns { isLoaded: true } immediately.
  * 3. Prevents "@googlemaps/js-api-loader" singleton conflicts by clearing Loader.instance
  *    before instantiation, preventing the "Loader must not be called again with different options" error.
  * 4. Shares a single loader promise across all mounting components.
@@ -24,8 +37,7 @@ export function useGoogleMapsLoader(): {
   loadError: Error | undefined;
 } {
   const [isLoaded, setIsLoaded] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return Boolean(window.google?.maps);
+    return isGoogleMapsLoaded();
   });
 
   const [loadError, setLoadError] = useState<Error | undefined>(() => {
@@ -36,13 +48,14 @@ export function useGoogleMapsLoader(): {
     // SSR guard
     if (typeof window === "undefined") return;
 
-    // Check if google maps is already loaded on window
-    if (window.google?.maps) {
+    // Check if google maps is already fully loaded on window
+    if (isGoogleMapsLoaded()) {
+      isScriptLoaded = true;
       setIsLoaded(true);
       return;
     }
 
-    if (isScriptLoaded) {
+    if (isScriptLoaded && isGoogleMapsLoaded()) {
       setIsLoaded(true);
       return;
     }
@@ -61,9 +74,9 @@ export function useGoogleMapsLoader(): {
       return;
     }
 
-    // Check if the script tag is already in DOM
+    // Check if the script tag is already in DOM and fully ready
     const existingScript = document.getElementById("google-map-script");
-    if (existingScript && window.google?.maps) {
+    if (existingScript && isGoogleMapsLoaded()) {
       isScriptLoaded = true;
       setIsLoaded(true);
       return;
@@ -108,8 +121,23 @@ export function useGoogleMapsLoader(): {
 
     loaderPromise
       .then(() => {
-        if (isMounted) {
+        if (!isMounted) return;
+        if (isGoogleMapsLoaded()) {
           setIsLoaded(true);
+        } else {
+          // Poll briefly in case Google Maps initializes constructor prototypes on the next tick
+          const start = Date.now();
+          const timer = setInterval(() => {
+            if (isGoogleMapsLoaded()) {
+              clearInterval(timer);
+              if (isMounted) setIsLoaded(true);
+            } else if (Date.now() - start > 4000) {
+              clearInterval(timer);
+              if (isMounted) {
+                setLoadError(new Error("Google Maps script loaded but core classes were not found"));
+              }
+            }
+          }, 50);
         }
       })
       .catch((err: unknown) => {
