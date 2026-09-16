@@ -4,18 +4,22 @@ import { CaptainStatus, RideStatus } from '@prisma/client';
 
 import { redisClient } from '../config/redis';
 
-export const setCaptainStatus = async (userId: string, status: CaptainStatus) => {
-  // Use upsert to auto-create the captain profile if it doesn't exist for this user
-  const captain = await prisma.captain.upsert({
+export const getOrCreateCaptain = async (userId: string) => {
+  return await prisma.captain.upsert({
     where: { userId },
-    update: {}, // Just to get the current profile and check status
+    update: {},
     create: {
       userId,
       status: CaptainStatus.OFFLINE,
       vehicleType: 'BIKE',
-      vehicleNumber: `AUTO-${Math.floor(1000 + Math.random() * 9000)}`
-    }
+      vehicleNumber: `AUTO-${Math.floor(1000 + Math.random() * 9000)}`,
+    },
   });
+};
+
+export const setCaptainStatus = async (userId: string, status: CaptainStatus) => {
+  // Use upsert to auto-create the captain profile if it doesn't exist for this user
+  const captain = await getOrCreateCaptain(userId);
 
   // Prevent changing status if ON_RIDE, unless specifically allowed by some admin override
   if (captain.status === CaptainStatus.ON_RIDE && status !== CaptainStatus.ON_RIDE) {
@@ -39,13 +43,7 @@ export const setCaptainStatus = async (userId: string, status: CaptainStatus) =>
 };
 
 export const getCaptainAssignedRides = async (userId: string) => {
-  const captain = await prisma.captain.findUnique({
-    where: { userId },
-  });
-
-  if (!captain) {
-    throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain profile not found');
-  }
+  const captain = await getOrCreateCaptain(userId);
 
   const rides = await prisma.ride.findMany({
     where: {
@@ -57,17 +55,59 @@ export const getCaptainAssignedRides = async (userId: string) => {
   return rides;
 };
 
+export const getCaptainScheduledRides = async (userId: string) => {
+  const captain = await getOrCreateCaptain(userId);
+
+  const now = new Date();
+  // Include scheduled rides from 15 minutes ago onwards (matching window) to any future scheduled time
+  const minScheduledTime = new Date(now.getTime() - 15 * 60 * 1000);
+
+  const rides = await prisma.ride.findMany({
+    where: {
+      status: RideStatus.SCHEDULED,
+      OR: [
+        { captainId: captain.id },
+        { captainId: null, scheduledAt: { gte: minScheduledTime } },
+      ],
+    },
+    orderBy: { scheduledAt: 'asc' },
+    include: {
+      rider: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  const totalScheduled = rides.length;
+  const assignedToMeCount = rides.filter((r) => r.captainId === captain.id).length;
+  const totalPotentialFare = rides.reduce(
+    (acc, r) => acc + Number(r.estimatedFare || r.finalFare || 0),
+    0
+  );
+
+  const nextUpcoming = rides.length > 0 ? rides[0].scheduledAt : null;
+
+  return {
+    rides,
+    stats: {
+      totalScheduled,
+      assignedToMeCount,
+      totalPotentialFare,
+      nextUpcoming,
+    },
+  };
+};
+
 export const getCaptainRideHistory = async (
   userId: string,
   options: { page?: number; limit?: number; status?: string } = {}
 ) => {
-  const captain = await prisma.captain.findUnique({
-    where: { userId },
-  });
-
-  if (!captain) {
-    throw new AppError('CAPTAIN_NOT_FOUND', 404, 'Captain profile not found');
-  }
+  const captain = await getOrCreateCaptain(userId);
 
   const page = Math.max(1, options.page || 1);
   const limit = Math.min(50, Math.max(1, options.limit || 20));

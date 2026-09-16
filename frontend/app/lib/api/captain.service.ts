@@ -10,6 +10,30 @@ export interface CaptainHistoryStats {
   cancelledTrips: number;
 }
 
+export interface CaptainScheduledStats {
+  totalScheduled: number;
+  assignedToMeCount: number;
+  totalPotentialFare: number;
+  nextUpcoming: string | null;
+}
+
+export interface CaptainScheduledRidesResponse {
+  rides: (Ride & {
+    rider?: {
+      id?: string;
+      name?: string;
+      phone?: string;
+      email?: string;
+    };
+    scheduledAt?: string;
+    finalFare?: number;
+    estimatedFare?: number;
+    captainId?: string | null;
+    createdAt?: string;
+  })[];
+  stats: CaptainScheduledStats;
+}
+
 export interface CaptainRideHistoryResponse {
   rides: (Ride & {
     rider?: {
@@ -108,6 +132,31 @@ export const captainService = {
         limit: 20,
         total: rides.length,
         totalPages: 1,
+      },
+    };
+  },
+
+  getScheduledRides: async (): Promise<CaptainScheduledRidesResponse> => {
+    const response = await apiClient.get('/captains/scheduled');
+    const rawData = response.data?.data || response.data || {};
+    const rawList = Array.isArray(rawData) ? rawData : (rawData.rides || response.data?.rides || []);
+    const rides = rawList.map((r: any) => ({
+      ...mapBackendRideToFrontend(r),
+      rider: r.rider,
+      scheduledAt: r.scheduledAt,
+      captainId: r.captainId,
+      finalFare: r.finalFare ? Number(r.finalFare) : undefined,
+      estimatedFare: r.estimatedFare ? Number(r.estimatedFare) : undefined,
+      createdAt: r.createdAt,
+    }));
+
+    return {
+      rides,
+      stats: rawData.stats || response.data?.stats || {
+        totalScheduled: rides.length,
+        assignedToMeCount: rides.filter((r: any) => Boolean(r.captainId)).length,
+        totalPotentialFare: rides.reduce((acc: number, r: any) => acc + (r.estimatedFare || r.finalFare || 0), 0),
+        nextUpcoming: rides.length > 0 ? rides[0].scheduledAt : null,
       },
     };
   },

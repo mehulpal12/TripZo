@@ -2,13 +2,16 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/AppError';
 import { logger } from '../utils/logger';
 
-export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof AppError) {
-    logger.error(`[AppError] ${err.code}: ${err.message}`, { metadata: err.metadata, stack: err.stack });
-    return res.status(err.statusCode).json({
+export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+  const isAppError = err instanceof AppError || (err && (err.statusCode || err.code));
+  if (isAppError) {
+    const statusCode = err.statusCode || 400;
+    const code = err.code || 'BAD_REQUEST';
+    logger.error(`[AppError] ${code}: ${err.message}`, { metadata: err.metadata, stack: err.stack });
+    return res.status(statusCode).json({
       success: false,
       error: {
-        code: err.code,
+        code,
         message: err.message,
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
       },

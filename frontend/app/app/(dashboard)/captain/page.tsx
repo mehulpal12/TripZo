@@ -6,6 +6,7 @@ import { useCaptainStore } from "@/stores/captain.store";
 import { captainService } from "@/lib/api/captain.service";
 import { useCaptainSocket } from "@/hooks/useCaptainSocket";
 import { CaptainRideHistory } from "@/features/captain/CaptainRideHistory";
+import { CaptainScheduledRides } from "@/features/captain/CaptainScheduledRides";
 
 const CaptainMapContainer = dynamic(
   () => import("@/components/map/CaptainMapContainer").then((mod) => mod.CaptainMapContainer),
@@ -75,19 +76,14 @@ export default function CaptainPage() {
     try {
       if (checked) {
         await captainService.setOnline();
+        setOnline(true);
       } else {
         await captainService.setOffline();
+        setOnline(false);
       }
-      setOnline(checked);
-    } catch (error: any) {
-      setOnline(!checked);
-      const message = error?.response?.data?.message || error.message || "Failed to change status";
-      console.error("Failed to toggle online status", message);
-      if (message.includes("on a ride")) {
-        alert("Cannot go offline: you are currently on an active ride. Complete or cancel the ride first.");
-      } else {
-        alert(`Status change failed: ${message}`);
-      }
+    } catch (error) {
+      console.error("Failed to update captain online status", error);
+      alert("Network error updating captain status");
     }
   };
 
@@ -109,14 +105,15 @@ export default function CaptainPage() {
   }, [activeRequest, accepting, setActiveRequest]);
 
   const handleAccept = async () => {
-    if (!activeRequest) return;
+    if (!activeRequest || accepting) return;
     setAccepting(true);
     try {
-      const response = await captainService.acceptRide(activeRequest.id);
-      setActiveRide(response.ride);
+      const { ride } = await captainService.acceptRide(activeRequest.id);
+      setActiveRide(ride);
       setActiveRequest(null);
     } catch (error) {
       console.error("Failed to accept ride", error);
+      alert("Failed to accept ride. It may have expired or been assigned to another captain.");
       setActiveRequest(null);
     } finally {
       setAccepting(false);
@@ -168,12 +165,12 @@ export default function CaptainPage() {
                   <span
                     className={`text-[9px] sm:text-[10px] ${
                       isOnline ? "text-[#FFD600]" : "text-slate-500"
-                    } font-extrabold tracking-widest uppercase`}
+                    } font-extrabold uppercase tracking-widest leading-none`}
                   >
-                    Driver Cockpit Status
+                    STATUS
                   </span>
-                  <span className="text-xs sm:text-sm font-extrabold tracking-tight">
-                    {isOnline ? "ONLINE · ACCEPTING RIDES" : "OFFLINE"}
+                  <span className="text-xs sm:text-sm font-black tracking-tight leading-tight">
+                    {isOnline ? "ONLINE • RECEIVING TRIPS" : "OFFLINE • STANDBY"}
                   </span>
                 </div>
               </div>
@@ -192,9 +189,11 @@ export default function CaptainPage() {
         </div>
       </section>
 
-      {/* Dynamic View: Cockpit vs Ride History */}
+      {/* Dynamic View: Cockpit vs Scheduled Rides vs Ride History */}
       {activeTab === "history" ? (
         <CaptainRideHistory />
+      ) : activeTab === "scheduled" ? (
+        <CaptainScheduledRides />
       ) : (
         /* Main Cockpit Tactical Stage */
         <div className="w-full max-w-[1680px] mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-5 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-6 items-start flex-1 min-h-0">
@@ -352,6 +351,56 @@ export default function CaptainPage() {
                 <span className="text-xs text-slate-400">
                   Toggle the status switch above to start receiving rides.
                 </span>
+              </div>
+            )}
+
+            {/* Online - Radar Scanning & Waiting for Rider */}
+            {!activeRequest && !activeRide && isOnline && (
+              <div className="relative overflow-hidden flex flex-col items-center justify-center py-7 sm:py-9 text-center gap-3 my-1 sm:my-3 bg-white border-2 border-dashed border-emerald-200 rounded-2xl shadow-sm">
+                {/* Background ambient radar glow */}
+                <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/50 via-white to-white pointer-events-none" />
+
+                {/* Radar Sonar Wave Pulse */}
+                <div className="relative flex items-center justify-center">
+                  <span className="animate-ping absolute inline-flex h-16 w-16 rounded-full bg-emerald-400 opacity-25"></span>
+                  <span className="animate-ping absolute inline-flex h-24 w-24 rounded-full bg-emerald-300 opacity-15" style={{ animationDuration: "2s" }}></span>
+                  <div className="relative z-10 w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                    <span className="material-symbols-outlined text-3xl animate-pulse">
+                      sensors
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status Text */}
+                <div className="relative z-10 flex flex-col items-center gap-1 max-w-xs sm:max-w-sm px-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-xs font-black text-emerald-700 tracking-wider uppercase">
+                      Fleet Radar Active
+                    </span>
+                  </div>
+                  <span className="text-base sm:text-lg font-black text-[#111111] tracking-tight">
+                    Searching for Nearby Ride Requests...
+                  </span>
+                  <span className="text-xs text-slate-500 leading-relaxed font-medium">
+                    You are online in the Delhi-NCR sector. Keep this cockpit tab open — ride request alerts will ping here automatically in real time.
+                  </span>
+                </div>
+
+                {/* Telemetry Chips */}
+                <div className="relative z-10 flex items-center gap-2 flex-wrap justify-center pt-1">
+                  <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs text-emerald-600">gps_fixed</span>
+                    <span>GPS Telemetry: Locked</span>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs text-[#FFD600]">bolt</span>
+                    <span>Demand: High</span>
+                  </span>
+                </div>
               </div>
             )}
 
@@ -563,7 +612,7 @@ export default function CaptainPage() {
             )}
 
             {/* Upcoming Scheduled Ride Reservation Card */}
-            <div className="flex flex-col gap-2 sm:gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm mt-1 sm:mt-2">
+            {/* <div className="flex flex-col gap-2 sm:gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm mt-1 sm:mt-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-slate-700 text-base">event_upcoming</span>
@@ -571,15 +620,21 @@ export default function CaptainPage() {
                     Scheduled Queue
                   </span>
                 </div>
-                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
-                  1 UPCOMING
-                </span>
+                <button
+                  onClick={() => setActiveTab("scheduled")}
+                  className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200 hover:bg-[#FFD600] hover:text-black hover:border-transparent transition-all cursor-pointer"
+                >
+                  VIEW QUEUE ➔
+                </button>
               </div>
-              <div className="p-3 sm:p-3.5 rounded-xl bg-[#F8F9FA] border border-slate-200 flex flex-col gap-1 transition-all hover:bg-slate-50 cursor-pointer">
+              <div 
+                onClick={() => setActiveTab("scheduled")}
+                className="p-3 sm:p-3.5 rounded-xl bg-[#F8F9FA] border border-slate-200 flex flex-col gap-1 transition-all hover:bg-slate-50 cursor-pointer group"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-700 text-sm">alarm</span>
-                    <span className="text-xs sm:text-sm font-bold text-[#111111]">
+                    <span className="text-xs sm:text-sm font-bold text-[#111111] group-hover:text-black">
                       Today, 2:30 PM (Reservation)
                     </span>
                   </div>
@@ -592,12 +647,12 @@ export default function CaptainPage() {
                   <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
                     Flight AI Sync #AI-902
                   </span>
-                  <span className="text-xs font-bold text-[#111111] flex items-center gap-0.5 hover:underline flex-shrink-0 ml-2">
-                    Details <span className="material-symbols-outlined text-xs">chevron_right</span>
+                  <span className="text-xs font-bold text-[#111111] flex items-center gap-0.5 group-hover:underline flex-shrink-0 ml-2">
+                    Open Queue <span className="material-symbols-outlined text-xs">chevron_right</span>
                   </span>
                 </div>
               </div>
-            </div>
+            </div> */}
             
           </div>
 

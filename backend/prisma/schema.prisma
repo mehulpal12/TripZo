@@ -66,9 +66,6 @@ model Ride {
   @@index([captainId])
   @@index([status])
   @@index([scheduledAt])
-  @@index([status, scheduledAt])
-  @@index([riderId, createdAt(sort: Desc)])
-  @@index([captainId, createdAt(sort: Desc)])
 }
 
 model RideRejection {

@@ -8,7 +8,7 @@ interface CaptainState {
   captainLocation: { lat: number; lng: number } | null;
   locationError: string | null;
   isGpsActive: boolean;
-  activeTab: 'cockpit' | 'history';
+  activeTab: 'cockpit' | 'history' | 'scheduled';
   
   setOnline: (status: boolean) => void;
   setActiveRequest: (request: Ride | null) => void;
@@ -16,7 +16,7 @@ interface CaptainState {
   setCaptainLocation: (location: { lat: number; lng: number } | null) => void;
   setLocationError: (error: string | null) => void;
   setIsGpsActive: (active: boolean) => void;
-  setActiveTab: (tab: 'cockpit' | 'history') => void;
+  setActiveTab: (tab: 'cockpit' | 'history' | 'scheduled') => void;
 }
 
 export const useCaptainStore = create<CaptainState>((set) => ({

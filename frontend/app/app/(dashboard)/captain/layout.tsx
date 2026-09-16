@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { SocketConnectionStatus } from "@/components/ui/SocketConnectionStatus";
-import { Bell, History, Compass } from "lucide-react";
+import { Bell, History, Compass, CalendarClock } from "lucide-react";
 import { useCaptainStore } from "@/stores/captain.store";
 
 export default function CaptainLayout({ children }: { children: ReactNode }) {
@@ -51,6 +51,17 @@ export default function CaptainLayout({ children }: { children: ReactNode }) {
               {isOnline && (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               )}
+            </button>
+            <button 
+              onClick={() => setActiveTab('scheduled')}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer ${
+                activeTab === 'scheduled'
+                  ? 'bg-[#FFD600] text-black shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <CalendarClock className="w-3.5 h-3.5" />
+              <span>Scheduled Rides</span>
             </button>
             <button 
               onClick={() => setActiveTab('history')}
