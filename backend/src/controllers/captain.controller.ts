@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { setCaptainStatus, getCaptainAssignedRides, getCaptainRideHistory, getCaptainScheduledRides } from '../services/captain.service';
+import { 
+  setCaptainStatus, 
+  getCaptainAssignedRides, 
+  getCaptainRideHistory, 
+  getCaptainScheduledRides,
+  getCaptainActiveRequest
+} from '../services/captain.service';
 import { CaptainStatus } from '@prisma/client';
 
 export const setOnline = async (req: Request, res: Response, next: NextFunction) => {
@@ -38,6 +44,20 @@ export const getRides = async (req: Request, res: Response, next: NextFunction) 
     res.status(200).json({
       success: true,
       data: rides,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getActiveRequest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.user!;
+    const activeRequest = await getCaptainActiveRequest(userId);
+
+    res.status(200).json({
+      success: true,
+      data: activeRequest,
     });
   } catch (error) {
     next(error);

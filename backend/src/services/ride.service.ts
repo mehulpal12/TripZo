@@ -10,8 +10,12 @@ export const createRide = async (data: {
   riderId: string;
   pickupLat: number;
   pickupLng: number;
+  pickupAddress?: string;
+  pickupName?: string;
   destinationLat: number;
   destinationLng: number;
+  destinationAddress?: string;
+  destinationName?: string;
   estimatedDistanceM: number;
   estimatedDurationS: number;
   estimatedFare: number;
@@ -22,7 +26,7 @@ export const createRide = async (data: {
     data: {
       ...rideData,
       status: RideStatus.SEARCHING,
-    },
+    } as any,
   });
 
   // Start the matching flow
@@ -49,8 +53,12 @@ export const createScheduledRide = async (data: {
   riderId: string;
   pickupLat: number;
   pickupLng: number;
+  pickupAddress?: string;
+  pickupName?: string;
   destinationLat: number;
   destinationLng: number;
+  destinationAddress?: string;
+  destinationName?: string;
   estimatedDistanceM: number;
   estimatedDurationS: number;
   estimatedFare: number;
@@ -60,7 +68,7 @@ export const createScheduledRide = async (data: {
     data: {
       ...data,
       status: RideStatus.SCHEDULED,
-    },
+    } as any,
   });
 
   // Calculate delay: trigger matching 15 minutes before scheduled pickup
@@ -92,13 +100,35 @@ export const startMatchingForRide = async (
   estimatedDistanceM: number | string | any,
   vehicleType: string = 'BIKE'
 ) => {
+  // Fetch ride details to check if it's an advance scheduled ride and get street addresses
+  const ride = await prisma.ride.findUnique({
+    where: { id: rideId },
+    include: {
+      rider: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+        },
+      },
+    },
+  });
+
+  // For scheduled rides starting match at T-15, keep search alive until departure time (or at least 10 minutes)
+  // For immediate on-demand rides, standard 2-minute cancellation window applies
+  let cancelDelay = 2 * 60 * 1000;
+  if (ride?.scheduledAt) {
+    const timeUntilDeparture = new Date(ride.scheduledAt).getTime() - Date.now();
+    cancelDelay = Math.max(10 * 60 * 1000, timeUntilDeparture);
+  }
+
   // Queue BullMQ job OUTSIDE the matching logic — always runs:
   const { rideQueue } = await import('../jobs/rideQueue');
   await rideQueue.add(
     'cancelIfNoAssignment',
     { rideId },
     {
-      delay: 2 * 60 * 1000,
+      delay: cancelDelay,
       jobId: `cancel-timeout-${rideId}`, // Idempotent: won't add duplicate if already scheduled
     }
   );
@@ -118,21 +148,113 @@ export const startMatchingForRide = async (
     : (process.env.NODE_ENV === 'production' ? 5 : 50);
   const nearbyCaptains = await getNearbyCaptains(rideId, pLat, pLng, radiusKm, vehicleType);
 
+  // Broadcast to rider that matching has officially started for their ride
+  if (ride?.riderId) {
+    try {
+      io.to(`rider:${ride.riderId}`).emit('ride:matching_started', {
+        ...ride,
+        status: RideStatus.SEARCHING,
+      });
+      io.to(`rider:${ride.riderId}`).emit('ride:status_update', {
+        rideId: ride.id,
+        status: RideStatus.SEARCHING,
+        ride,
+      });
+    } catch (err) {
+      console.error('Failed to emit ride:matching_started to rider:', err);
+    }
+  }
+
   if (nearbyCaptains.length > 0) {
     console.log(`Found ${nearbyCaptains.length} eligible captains for ride ${rideId} (vehicleType: ${vehicleType})`);
     nearbyCaptains.forEach((captain) => {
       io.to(`captain:${captain.userId}`).emit('ride:new', {
         rideId: rideId,
-        pickup: { lat: pLat, lng: pLng },
-        destination: { lat: dLat, lng: dLng },
+        pickup: {
+          lat: pLat,
+          lng: pLng,
+          address: ride?.pickupAddress || 'Pickup Point',
+          name: ride?.pickupName || ride?.pickupAddress || 'Pickup Point',
+        },
+        destination: {
+          lat: dLat,
+          lng: dLng,
+          address: ride?.destinationAddress || 'Drop Point',
+          name: ride?.destinationName || ride?.destinationAddress || 'Drop Point',
+        },
         estimatedFare: fare,
         estimatedDistanceM: dist,
         vehicleType,
+        scheduledAt: ride?.scheduledAt,
+        isScheduled: Boolean(ride?.scheduledAt),
+        rider: ride?.rider,
       });
     });
   } else {
     console.log(`No eligible captains found initially for ride ${rideId}`);
   }
+};
+
+export const getActiveRideForRider = async (userId: string) => {
+  const activeRide = await prisma.ride.findFirst({
+    where: {
+      riderId: userId,
+      status: {
+        in: [
+          RideStatus.SEARCHING,
+          RideStatus.CAPTAIN_ASSIGNED,
+          RideStatus.CAPTAIN_ARRIVING,
+          RideStatus.CAPTAIN_ARRIVED,
+          RideStatus.IN_PROGRESS,
+        ],
+      },
+    },
+    orderBy: [
+      { scheduledAt: 'asc' },
+      { createdAt: 'desc' },
+    ],
+    include: {
+      captain: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+            },
+          },
+        },
+      },
+      rider: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+        },
+      },
+    },
+  });
+
+  if (!activeRide) {
+    return null;
+  }
+
+  let captainLocation = null;
+  if (activeRide.captain && redisClient.isReady) {
+    const geoPos = await redisClient.geoPos('captain_locations', activeRide.captain.userId);
+    if (geoPos && geoPos[0]) {
+      captainLocation = {
+        lat: geoPos[0].latitude,
+        lng: geoPos[0].longitude,
+      };
+    }
+  }
+
+  return {
+    ...activeRide,
+    captainLocation,
+  };
 };
 
 export const getRideById = async (rideId: string, userId: string, role: Role) => {
@@ -254,7 +376,16 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
   
   try {
     const io = getIO();
-    io.to(`ride:${rideId}`).emit('ride:cancelled', { reason: reason || 'Cancelled by user' });
+    io.to(`ride:${rideId}`).emit('ride:cancelled', { reason: reason || 'Cancelled by user', rideId });
+    if (ride.riderId) {
+      io.to(`rider:${ride.riderId}`).emit('ride:cancelled', { reason: reason || 'Cancelled by user', rideId });
+    }
+    if (ride.captainId) {
+      const captain = await prisma.captain.findUnique({ where: { id: ride.captainId } });
+      if (captain?.userId) {
+        io.to(`captain:${captain.userId}`).emit('ride:cancelled', { reason: reason || 'Cancelled by user', rideId });
+      }
+    }
   } catch (err) {
     console.error('Socket broadcast error:', err);
   }

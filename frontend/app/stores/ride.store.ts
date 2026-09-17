@@ -12,6 +12,13 @@ export interface Ride {
   fare: number;
   riderId?: string;
   captainId?: string;
+  scheduledAt?: string;
+  isScheduled?: boolean;
+  estimatedFare?: number;
+  finalFare?: number;
+  estimatedDistanceM?: number;
+  estimatedDurationS?: number;
+  createdAt?: string;
   captain?: {
     id: string;
     vehicleType: string;
@@ -20,8 +27,9 @@ export interface Ride {
     rating: number;
     totalTrips: number;
     user: {
-      firstName: string;
-      lastName: string;
+      name?: string;
+      firstName?: string;
+      lastName?: string;
       phone: string;
       profilePicture?: string | null;
     }
@@ -30,6 +38,8 @@ export interface Ride {
 }
 
 interface RideState {
+  activeTab: "book" | "scheduled";
+  setActiveTab: (tab: "book" | "scheduled") => void;
   pickup: LocationData | null;
   destination: LocationData | null;
   vehicleType: "BIKE" | "AUTO" | "CAB";
@@ -44,6 +54,8 @@ interface RideState {
 }
 
 export const useRideStore = create<RideState>((set) => ({
+  activeTab: "book",
+  setActiveTab: (activeTab) => set({ activeTab }),
   pickup: null,
   destination: null,
   vehicleType: "BIKE",

@@ -15,9 +15,26 @@ export function useRiderSocket() {
     const socket = socketClient.connect();
     if (!socket) return;
 
+    const handleMatchingStarted = (data: any) => {
+      console.log("ride:matching_started received on personal room", data);
+      const mapped = mapBackendRideToFrontend(data);
+      useRideStore.getState().setActiveRide(mapped);
+      useRideStore.getState().setActiveTab("book");
+    };
+
+    const handlePersonalStatusUpdate = (data: any) => {
+      console.log("ride:status_update received on personal room", data);
+      if (data?.ride) {
+        useRideStore.getState().setActiveRide(mapBackendRideToFrontend(data.ride));
+      } else if (data?.status) {
+        useRideStore.getState().updateRideStatus(data.status);
+      }
+    };
+
     const handleCaptainAssigned = (data: any) => {
       console.log("ride:captain_assigned received on personal room", data);
       useRideStore.getState().setActiveRide(mapBackendRideToFrontend(data));
+      useRideStore.getState().setActiveTab("book");
     };
 
     const handleCancelled = () => {
@@ -32,11 +49,15 @@ export function useRiderSocket() {
       }
     };
 
+    socket.on("ride:matching_started", handleMatchingStarted);
+    socket.on("ride:status_update", handlePersonalStatusUpdate);
     socket.on("ride:captain_assigned", handleCaptainAssigned);
     socket.on("ride:cancelled", handleCancelled);
     socket.on("connect", rejoinOnReconnect);
 
     return () => {
+      socket.off("ride:matching_started", handleMatchingStarted);
+      socket.off("ride:status_update", handlePersonalStatusUpdate);
       socket.off("ride:captain_assigned", handleCaptainAssigned);
       socket.off("ride:cancelled", handleCancelled);
       socket.off("connect", rejoinOnReconnect);

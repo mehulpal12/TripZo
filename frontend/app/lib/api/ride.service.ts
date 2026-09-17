@@ -22,6 +22,13 @@ export interface CreateRideDTO {
   vehicleType: "BIKE" | "AUTO" | "CAB";
 }
 
+export interface ScheduleRideDTO {
+  pickup: LocationData;
+  destination: LocationData;
+  vehicleType: "BIKE" | "AUTO" | "CAB";
+  scheduledAt: string; // ISO string
+}
+
 export const mapBackendRideToFrontend = (backendRide: any): Ride => {
   if (!backendRide) return backendRide;
   return {
@@ -38,6 +45,12 @@ export const mapBackendRideToFrontend = (backendRide: any): Ride => {
       address: backendRide.destinationAddress || backendRide.destination?.address,
       name: backendRide.destinationName || backendRide.destination?.name,
     },
+    scheduledAt: backendRide.scheduledAt,
+    estimatedFare: backendRide.estimatedFare ? Number(backendRide.estimatedFare) : undefined,
+    finalFare: backendRide.finalFare ? Number(backendRide.finalFare) : undefined,
+    estimatedDistanceM: backendRide.estimatedDistanceM ? Number(backendRide.estimatedDistanceM) : undefined,
+    estimatedDurationS: backendRide.estimatedDurationS ? Number(backendRide.estimatedDurationS) : undefined,
+    createdAt: backendRide.createdAt,
   };
 };
 
@@ -52,9 +65,26 @@ export const rideService = {
     return mapBackendRideToFrontend(response.data.data); // Ride object
   },
 
+  scheduleRide: async (data: ScheduleRideDTO) => {
+    const response = await apiClient.post("/rides/schedule", data);
+    return mapBackendRideToFrontend(response.data.data); // Scheduled Ride object
+  },
+
+  getScheduledRides: async (): Promise<Ride[]> => {
+    const response = await apiClient.get("/rides/scheduled");
+    const list = response.data?.data || [];
+    return list.map((r: any) => mapBackendRideToFrontend(r));
+  },
+
   cancelRide: async (rideId: string, reason?: string) => {
     const response = await apiClient.post(`/rides/${rideId}/cancel`, { reason });
     return mapBackendRideToFrontend(response.data.data); // Updated Ride object
+  },
+
+  getActiveRide: async (): Promise<Ride | null> => {
+    const response = await apiClient.get("/rides/active");
+    if (!response.data?.data) return null;
+    return mapBackendRideToFrontend(response.data.data);
   },
 
   getRide: async (rideId: string) => {

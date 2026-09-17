@@ -48,25 +48,29 @@ export const getNearbyCaptains = async (
       .catch(err => console.error("Failed to clean up stale captain locations in Redis:", err));
   }
 
-  if (activeMembers.length === 0) {
-    return [];
-  }
-
   // 2. Filter via Postgres
   // - Captain status must be AVAILABLE
   // - Vehicle type must match (if provided)
   // - Captain must not have rejected this ride
-  const eligibleCaptains = await prisma.captain.findMany({
-    where: {
-      userId: { in: activeMembers },
-      status: CaptainStatus.AVAILABLE,
-      ...(vehicleType ? { vehicleType } : {}),
-      rejections: {
-        none: {
-          rideId: rideId,
-        },
+  const captainWhereClause: any = {
+    status: CaptainStatus.AVAILABLE,
+    ...(vehicleType ? { vehicleType } : {}),
+    rejections: {
+      none: {
+        rideId: rideId,
       },
     },
+  };
+
+  if (activeMembers.length > 0) {
+    captainWhereClause.userId = { in: activeMembers };
+  } else if (process.env.NODE_ENV === 'production') {
+    // In strict production, require active GEO coordinates
+    return [];
+  }
+
+  const eligibleCaptains = await prisma.captain.findMany({
+    where: captainWhereClause,
     include: {
       user: true, // to easily get names/push tokens if needed
     },

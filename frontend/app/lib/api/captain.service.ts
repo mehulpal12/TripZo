@@ -86,20 +86,49 @@ export const captainService = {
     await apiClient.post('/captains/offline');
   },
 
-  getCurrentState: async (): Promise<{ isOnline: boolean; activeRide: Ride | null }> => {
+  getActiveRequest: async (): Promise<any | null> => {
     try {
-      const response = await apiClient.get('/captains/rides');
-      const rides = response.data?.data || [];
-      if (rides.length > 0) {
-        const latestRide = rides[0];
-        if (['CAPTAIN_ASSIGNED', 'CAPTAIN_ARRIVING', 'CAPTAIN_ARRIVED', 'IN_PROGRESS'].includes(latestRide.status)) {
-          return { isOnline: true, activeRide: mapBackendRideToFrontend(latestRide) };
+      const response = await apiClient.get('/captains/active-request');
+      return response.data?.data || null;
+    } catch (err) {
+      console.error("Failed to fetch captain active request", err);
+      return null;
+    }
+  },
+
+  getCurrentState: async (): Promise<{ isOnline: boolean; activeRide: Ride | null; activeRequest: any | null }> => {
+    try {
+      const [ridesRes, activeReqRes] = await Promise.allSettled([
+        apiClient.get('/captains/rides'),
+        apiClient.get('/captains/active-request'),
+      ]);
+
+      let activeRide: Ride | null = null;
+      let activeRequest: any | null = null;
+      let isOnline = false;
+
+      if (ridesRes.status === 'fulfilled') {
+        const rides = ridesRes.value.data?.data || [];
+        if (rides.length > 0) {
+          const latestRide = rides[0];
+          if (['CAPTAIN_ASSIGNED', 'CAPTAIN_ARRIVING', 'CAPTAIN_ARRIVED', 'IN_PROGRESS'].includes(latestRide.status)) {
+            activeRide = mapBackendRideToFrontend(latestRide);
+            isOnline = true;
+          }
         }
       }
-      return { isOnline: false, activeRide: null };
+
+      if (activeReqRes.status === 'fulfilled') {
+        activeRequest = activeReqRes.value.data?.data || null;
+        if (activeRequest) {
+          isOnline = true;
+        }
+      }
+
+      return { isOnline, activeRide, activeRequest };
     } catch (err) {
       console.error("Failed to fetch current captain state", err);
-      return { isOnline: false, activeRide: null };
+      return { isOnline: false, activeRide: null, activeRequest: null };
     }
   },
 

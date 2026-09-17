@@ -1,8 +1,13 @@
+"use client";
+
 import { ReactNode } from "react";
-import { User, Bell, Search, CircleDot } from "lucide-react";
+import { User, Bell, Search, CircleDot, CalendarClock, Compass } from "lucide-react";
 import { SocketConnectionStatus } from "@/components/ui/SocketConnectionStatus";
+import { useRideStore } from "@/stores/ride.store";
 
 export default function RiderLayout({ children }: { children: ReactNode }) {
+  const { activeTab, setActiveTab, activeRide } = useRideStore();
+
   return (
     <div className="h-screen w-full flex flex-col bg-black font-sans overflow-hidden selection:bg-primary/20 selection:text-primary">
       <SocketConnectionStatus />
@@ -12,7 +17,10 @@ export default function RiderLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-4 sm:gap-6">
           {/* Logo & Network Status */}
           <div className="flex items-center gap-3 sm:gap-4">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-primary bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
+            <h1 
+              onClick={() => setActiveTab("book")}
+              className="text-xl sm:text-2xl font-black tracking-tighter text-primary bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent cursor-pointer select-none"
+            >
               TRIPZO
             </h1>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/60 shadow-2xs">
@@ -22,9 +30,32 @@ export default function RiderLayout({ children }: { children: ReactNode }) {
           </div>
 
           {/* Nav Tabs */}
-          <nav className="hidden lg:flex items-center gap-1.5">
-            <button className="px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-xl transition-all">Book Ride</button>
-            <button className="px-3.5 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-xl shadow-[0_0_16px_rgba(255,208,0,0.25)] hover:brightness-105 transition-all">Live Tracking</button>
+          <nav className="flex items-center gap-1.5 p-1 bg-muted/50 rounded-full border border-border/80 shadow-inner">
+            <button 
+              onClick={() => setActiveTab("book")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeTab === "book"
+                  ? "bg-primary text-black shadow-xs font-black"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>{activeRide ? "Active Ride" : "Book Ride"}</span>
+              {activeRide && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              )}
+            </button>
+            <button 
+              onClick={() => setActiveTab("scheduled")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeTab === "scheduled"
+                  ? "bg-primary text-black shadow-xs font-black"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <CalendarClock className="w-3.5 h-3.5" />
+              <span>Schedule Ride</span>
+            </button>
           </nav>
         </div>
 

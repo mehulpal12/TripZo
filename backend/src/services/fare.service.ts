@@ -45,9 +45,15 @@ export const estimateFare = (
     throw new AppError('INVALID_COORDINATES', 400, 'Coordinates are outside valid latitude/longitude ranges');
   }
 
-  if (vehicleType !== 'BIKE') {
-    throw new AppError('UNSUPPORTED_VEHICLE', 400, 'Currently only BIKE is supported');
-  }
+  const VEHICLE_RATES: Record<string, number> = {
+    BIKE: 12,
+    AUTO: 16,
+    CAB: 22,
+  };
+
+  const normalizedVehicle = (vehicleType || 'BIKE').toUpperCase();
+  const ratePerKm = VEHICLE_RATES[normalizedVehicle] || VEHICLE_RATES.BIKE;
+  const minFare = normalizedVehicle === 'CAB' ? 50 : normalizedVehicle === 'AUTO' ? 30 : 20;
 
   const distanceKm = getDistanceFromLatLonInKm(pickupLat, pickupLng, destinationLat, destinationLng);
   
@@ -59,10 +65,8 @@ export const estimateFare = (
   const distanceMeters = Math.round(distanceKm * 1000);
   const durationSeconds = Math.round((distanceKm / AVERAGE_SPEED_KMH) * 3600);
   
-  // Calculate fare: 12/KM
-  // Minimum fare can be set to 20
-  const baseFare = distanceKm * BIKE_RATE_PER_KM;
-  const estimatedFare = Math.max(20, Math.round(baseFare));
+  const baseFare = distanceKm * ratePerKm;
+  const estimatedFare = Math.max(minFare, Math.round(baseFare));
 
   return {
     estimatedDistanceM: distanceMeters,

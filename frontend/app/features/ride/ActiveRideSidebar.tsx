@@ -41,37 +41,66 @@ export function ActiveRideSidebar() {
             <span className="font-label-sm text-[11px] px-2 py-0.5 rounded bg-[#1E293B] text-white border border-slate-700 font-bold tracking-wider">GPS LOCKED</span>
           </div>
           <div className="flex items-baseline gap-space-xs mt-space-xs">
-            <span className="font-display-lg text-5xl font-black text-white tracking-tight" id="eta-display">14</span>
-            <span className="font-headline-md text-2xl font-black text-[#FFD600]">mins</span>
-            <span className="font-body-md text-sm text-gray-300 ml-auto font-medium">remaining</span>
+            <span className="font-display-lg text-5xl font-black text-white tracking-tight" id="eta-display">
+              {activeRide.status === "SEARCHING" ? "Searching" : "14"}
+            </span>
+            {activeRide.status !== "SEARCHING" && (
+              <>
+                <span className="font-headline-md text-2xl font-black text-[#FFD600]">mins</span>
+                <span className="font-body-md text-sm text-gray-300 ml-auto font-medium">remaining</span>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-space-xs text-gray-300 font-body-md text-sm">
             <span className="material-symbols-outlined text-base text-[#FFD600]">near_me</span>
-            <span className="font-bold text-white" id="distance-display">8.2 km</span>
-            <span className="text-gray-300">· to Cyber City Gate 3</span>
+            <span className="font-bold text-white" id="distance-display">
+              {activeRide.estimatedDistanceM ? `${(activeRide.estimatedDistanceM / 1000).toFixed(1)} km` : "Route locked"}
+            </span>
+            <span className="text-gray-300 truncate">
+              · to {activeRide.destination?.name || activeRide.destination?.address || "Drop Point"}
+            </span>
           </div>
 
           {/* Dynamic Speed & Traffic bar */}
           <div className="mt-space-sm pt-space-sm flex items-center justify-between bg-[#1E293B] rounded-lg px-3 py-2 border border-slate-700">
             <div className="flex items-center gap-space-xs">
               <span className="material-symbols-outlined text-base text-[#FFD600]">speed</span>
-              <span className="font-telemetry-sm text-xs text-[#FFD600] font-black tracking-wide">42 KM/H VELOCITY</span>
+              <span className="font-telemetry-sm text-xs text-[#FFD600] font-black tracking-wide">
+                {activeRide.status === "SEARCHING" ? "PRE-DISPATCH RADAR" : "OPTIMAL CORRIDOR"}
+              </span>
             </div>
-            <span className="font-label-sm text-xs text-gray-300 font-semibold">Optimal Flow · NH-48</span>
+            <span className="font-label-sm text-xs text-gray-300 font-semibold">
+              {activeRide.scheduledAt ? "Advance Scheduled" : "On-Demand Flow"}
+            </span>
           </div>
         </div>
 
         {/* Searching UI or Captain Profile */}
         {activeRide.status === "SEARCHING" ? (
-          <div className="p-space-xl rounded-xl bg-[#111111] text-white border border-gray-800 flex flex-col items-center justify-center gap-space-md shadow-md text-center py-12">
+          <div className="p-space-xl rounded-xl bg-[#111111] text-white border border-gray-800 flex flex-col items-center justify-center gap-space-md shadow-md text-center py-10">
             <div className="relative">
               <span className="material-symbols-outlined text-5xl text-[#FFD600] animate-pulse">radar</span>
               <div className="absolute inset-0 bg-[#FFD600]/20 rounded-full blur-xl animate-ping"></div>
             </div>
             <div className="flex flex-col gap-1">
-              <h3 className="font-headline-sm text-lg font-bold text-white tracking-wide">Searching for Captains</h3>
-              <p className="font-telemetry-sm text-sm text-gray-400">Broadcasting your request to nearby captains...</p>
+              <h3 className="font-headline-sm text-lg font-bold text-white tracking-wide">
+                {activeRide.scheduledAt ? "Dispatching Pre-Scheduled Ride" : "Searching for Captains"}
+              </h3>
+              <p className="font-telemetry-sm text-sm text-gray-400">
+                {activeRide.scheduledAt
+                  ? "Matching your advance booking with nearby top-rated captains..."
+                  : "Broadcasting your request to nearby captains..."}
+              </p>
             </div>
+            <button
+              onClick={async () => {
+                await rideService.cancelRide(activeRide.id);
+                setActiveRide(null);
+              }}
+              className="mt-2 px-4 py-1.5 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-200 text-xs font-bold border border-red-700/50 transition-all cursor-pointer"
+            >
+              Cancel Search
+            </button>
           </div>
         ) : (
           <div className="p-space-lg rounded-xl bg-[#111111] text-white border border-gray-800 flex flex-col gap-space-md shadow-md">
@@ -79,7 +108,7 @@ export function ActiveRideSidebar() {
               <div className="relative">
                 <img 
                   className="w-14 h-14 rounded-full object-cover shadow-md ring-2 ring-[#FFD600] bg-slate-800" 
-                  src={activeRide.captain?.user?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeRide.captain?.user ? `${activeRide.captain.user.firstName} ${activeRide.captain.user.lastName}` : 'Captain')}&background=111111&color=FFD600`} 
+                  src={activeRide.captain?.user?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeRide.captain?.user ? `${activeRide.captain.user.firstName || activeRide.captain.user.name}` : 'Captain')}&background=111111&color=FFD600`} 
                   alt="Captain Avatar" 
                 />
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#FFD600] text-black flex items-center justify-center shadow font-bold">
@@ -91,7 +120,7 @@ export function ActiveRideSidebar() {
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-space-xs">
                   <h3 className="font-headline-sm text-lg font-bold text-white truncate">
-                    {activeRide.captain?.user ? `${activeRide.captain.user.firstName} ${activeRide.captain.user.lastName}` : 'Captain'}
+                    {activeRide.captain?.user ? `${activeRide.captain.user.firstName || activeRide.captain.user.name}` : 'Captain'}
                   </h3>
                   <span className="material-symbols-outlined text-sm text-[#FFD600]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
                 </div>
@@ -138,7 +167,7 @@ export function ActiveRideSidebar() {
                 }}
               >
                 <span className="material-symbols-outlined text-lg text-red-400 group-hover:scale-110 transition-transform" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
-                <span className="font-label-sm text-xs mt-1 font-black tracking-wide text-red-200">SOS Shield</span>
+                <span className="font-label-sm text-xs mt-1 font-black tracking-wide text-red-200">Cancel</span>
               </button>
             </div>
           </div>
@@ -158,19 +187,26 @@ export function ActiveRideSidebar() {
             {/* Stop 1: Pickup */}
             <div className="relative flex items-start justify-between">
               <div className="absolute -left-[19px] top-1 w-3.5 h-3.5 rounded-full bg-[#FFD600] ring-4 ring-[#111111] flex items-center justify-center"></div>
-              <div className="flex flex-col">
-                <span className="font-label-lg text-sm text-white font-semibold">Connaught Place Outer Circle</span>
-                <span className="font-body-sm text-xs text-gray-400">Gate 4, Opp. Regal Cinema</span>
+              <div className="flex flex-col min-w-0 pr-2">
+                <span className="font-label-lg text-sm text-white font-semibold truncate">
+                  {activeRide.pickup?.name || "Pickup Point"}
+                </span>
+                <span className="font-body-sm text-xs text-gray-400 truncate">
+                  {activeRide.pickup?.address || "Pickup Location"}
+                </span>
               </div>
-              <span className="font-telemetry-sm text-xs text-gray-400">10:14 AM</span>
             </div>
 
-            {/* Stop 2: Current Position */}
+            {/* Stop 2: Current Position / Progress */}
             <div className="relative flex items-start justify-between">
               <div className="absolute -left-[19px] top-1 w-3.5 h-3.5 rounded-full bg-[#FFD600] ring-4 ring-[#111111] animate-pulse"></div>
               <div className="flex flex-col">
-                <span className="font-label-lg text-sm text-[#FFD600] font-bold">Outer Ring Road (Transit)</span>
-                <span className="font-body-sm text-xs text-gray-300">Approaching Dhaula Kuan flyover</span>
+                <span className="font-label-lg text-sm text-[#FFD600] font-bold">
+                  {activeRide.status === "SEARCHING" ? "Dispatching Network" : "Captain Assigned"}
+                </span>
+                <span className="font-body-sm text-xs text-gray-300">
+                  {activeRide.status === "SEARCHING" ? "Matching nearest captain" : "En route to pickup"}
+                </span>
               </div>
               <span className="font-telemetry-sm text-xs text-[#FFD600] font-black px-1.5 py-0.5 bg-[#1E293B] rounded">NOW</span>
             </div>
@@ -178,21 +214,26 @@ export function ActiveRideSidebar() {
             {/* Stop 3: Drop-off */}
             <div className="relative flex items-start justify-between">
               <div className="absolute -left-[19px] top-1 w-3.5 h-3.5 rounded-sm bg-white ring-4 ring-[#111111]"></div>
-              <div className="flex flex-col">
-                <span className="font-label-lg text-sm text-white font-semibold">Cyber City Gate 3</span>
-                <span className="font-body-sm text-xs text-gray-400">DLF Phase 2, Gurugram</span>
+              <div className="flex flex-col min-w-0 pr-2">
+                <span className="font-label-lg text-sm text-white font-semibold truncate">
+                  {activeRide.destination?.name || "Destination"}
+                </span>
+                <span className="font-body-sm text-xs text-gray-400 truncate">
+                  {activeRide.destination?.address || "Destination Point"}
+                </span>
               </div>
-              <span className="font-telemetry-sm text-xs text-gray-400">10:38 AM</span>
             </div>
           </div>
         </div>
 
-        {/* Fare, Payment & OTP Pill (High-Contrast Charcoal & Slate Cards) */}
+        {/* Fare, Payment & OTP Pill */}
         <div className="grid grid-cols-2 gap-space-sm">
           <div className="p-space-md rounded-xl bg-[#111111] text-white border border-gray-800 flex flex-col justify-between shadow-sm">
             <span className="font-label-sm text-[11px] text-gray-400 uppercase tracking-wider font-semibold">Locked Fare</span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="font-headline-md text-2xl font-black text-white">₹{activeRide.fare || "148"}</span>
+              <span className="font-headline-md text-2xl font-black text-white">
+                ₹{activeRide.finalFare || activeRide.estimatedFare || activeRide.fare || "---"}
+              </span>
               <span className="font-body-sm text-xs text-[#FFD600] font-bold">Guaranteed</span>
             </div>
             <span className="font-telemetry-sm text-xs text-gray-400 mt-1">TRIPZO Pay Direct</span>

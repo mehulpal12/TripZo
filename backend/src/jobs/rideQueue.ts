@@ -44,8 +44,28 @@ export const rideWorker = new Worker(
         return;
       }
 
-      const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+      const ride = await prisma.ride.findUnique({
+        where: { id: rideId },
+        include: {
+          rider: {
+            select: { id: true, name: true, phone: true },
+          },
+        },
+      });
       if (ride) {
+        try {
+          const { getIO } = await import('../socket');
+          const io = getIO();
+          io.to(`rider:${ride.riderId}`).emit('ride:matching_started', ride);
+          io.to(`rider:${ride.riderId}`).emit('ride:status_update', {
+            rideId: ride.id,
+            status: RideStatus.SEARCHING,
+            ride,
+          });
+        } catch (err) {
+          console.error('BullMQ: failed to emit matching_started to rider:', err);
+        }
+
         await startMatchingForRide(
           ride.id,
           ride.pickupLat,
@@ -133,13 +153,15 @@ rideWorker.on('failed', (job, err) => {
   console.error(`Job ${job?.id} has failed with ${err.message}`);
 });
 
-// Initialize distributed-safe reconciliation job to run every 5 minutes
+// Initialize distributed-safe reconciliation job to run every 1 minute
 export const initReconciliationJob = async () => {
+  // Trigger an initial sweep on server startup
+  await rideQueue.add('reconciliation', {}, { jobId: `init-sweep-${Date.now()}` }).catch(() => {});
+
   // Upsert a distributed-safe job scheduler (BullMQ v6 API)
-  // This is natively idempotent across all server pods
   await rideQueue.upsertJobScheduler(
     'reconciliation-singleton',
-    { every: 5 * 60 * 1000 },
+    { every: 60 * 1000 },
     {
       name: 'reconciliation',
       data: {},

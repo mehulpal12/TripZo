@@ -6,6 +6,8 @@ import {
   getFare,
   createImmediateRide,
   scheduleRide,
+  getScheduledRidesForRider,
+  getActiveRide,
   getRide,
   getRideHistory,
   cancel,
@@ -21,6 +23,8 @@ const router = Router();
 const coordinateSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
+  address: z.string().optional(),
+  name: z.string().optional(),
 });
 
 const getFareSchema = z.object({
@@ -46,7 +50,9 @@ const scheduleRideSchema = z.object({
     pickup: coordinateSchema,
     destination: coordinateSchema,
     vehicleType: z.string().optional(),
-    scheduledAt: z.string().datetime(),
+    scheduledAt: z.string().refine((val) => !isNaN(Date.parse(val)), {
+      message: 'Invalid datetime format for scheduledAt',
+    }),
   }),
 });
 
@@ -62,6 +68,8 @@ router.use(requireAuth);
 router.get('/fare', validate(getFareSchema), getFare);
 router.post('/', validate(createRideSchema), createImmediateRide);
 router.post('/schedule', validate(scheduleRideSchema), scheduleRide);
+router.get('/scheduled', getScheduledRidesForRider);
+router.get('/active', getActiveRide);
 router.get('/', getRideHistory);
 router.get('/:rideId', getRide);
 router.post('/:rideId/cancel', validate(cancelRideSchema), cancel);

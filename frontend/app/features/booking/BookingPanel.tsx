@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useRideStore } from "@/stores/ride.store";
 import { rideService, LocationData } from "@/lib/api/ride.service";
 import { MOCK_RIDER_LOCATION, MOCK_DESTINATION_LOCATION } from "@/config/mockLocation";
-import { MapPin, Navigation, Bike, Car, Loader2, Crosshair, X, Search } from "lucide-react";
+import { MapPin, Navigation, Bike, Car, Loader2, Crosshair, X, Search, CalendarClock } from "lucide-react";
 
 // Fallback landmarks across Delhi-NCR if Places API is idle
 const DEFAULT_POPULAR_HUBS: (LocationData & { tag: string })[] = [
@@ -22,7 +22,7 @@ const DEFAULT_POPULAR_HUBS: (LocationData & { tag: string })[] = [
 export function BookingPanel() {
   const { isLoaded } = useGoogleMapsLoader();
 
-  const { pickup, destination, setPickup, setDestination, vehicleType, setVehicleType, setActiveRide } = useRideStore();
+  const { pickup, destination, setPickup, setDestination, vehicleType, setVehicleType, setActiveRide, setActiveTab } = useRideStore();
   const [loading, setLoading] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [fareEstimate, setFareEstimate] = useState<number | null>(null);
@@ -370,6 +370,25 @@ export function BookingPanel() {
     <div className="w-full flex flex-col gap-4">
       <Card className="w-full bg-card border-border shadow-md overflow-visible rounded-2xl">
         <CardContent className="p-4 sm:p-5 space-y-4">
+
+          {/* Mode Switcher: Ride Now vs Schedule Later */}
+          <div className="flex items-center justify-between p-1 bg-muted/50 rounded-xl border border-border">
+            <button
+              type="button"
+              className="flex-1 py-1.5 px-3 text-xs font-black rounded-lg bg-primary text-black shadow-xs flex items-center justify-center gap-1.5 cursor-default"
+            >
+              <Navigation className="w-3.5 h-3.5" />
+              <span>Ride Now</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("scheduled")}
+              className="flex-1 py-1.5 px-3 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <CalendarClock className="w-3.5 h-3.5 text-primary" />
+              <span>Schedule Later</span>
+            </button>
+          </div>
 
           {/* Location Inputs Group */}
           <div className="space-y-3 relative">

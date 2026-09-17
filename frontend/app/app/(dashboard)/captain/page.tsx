@@ -56,12 +56,42 @@ export default function CaptainPage() {
           setActiveRide(state.activeRide);
           setOnline(true);
         }
+        if (state.activeRequest) {
+          setActiveRequest(state.activeRequest);
+          setOnline(true);
+        } else if (state.isOnline) {
+          setOnline(true);
+        }
       }
     });
     return () => {
       isMounted = false;
     };
-  }, [setActiveRide, setOnline]);
+  }, [setActiveRide, setActiveRequest, setOnline]);
+
+  // Periodic polling for active dispatch requests when online & available
+  useEffect(() => {
+    if (!isOnline || activeRide || activeRequest) return;
+
+    let isSubscribed = true;
+    const pollActiveRequest = async () => {
+      try {
+        const req = await captainService.getActiveRequest();
+        if (isSubscribed && req && !activeRequest) {
+          setActiveRequest(req);
+        }
+      } catch (err) {
+        console.error("Polling active request error:", err);
+      }
+    };
+
+    pollActiveRequest();
+    const interval = setInterval(pollActiveRequest, 5000);
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
+  }, [isOnline, activeRide, activeRequest, setActiveRequest]);
 
   const handleOnlineToggle = async (checked: boolean) => {
     if (activeRide) {
@@ -87,21 +117,24 @@ export default function CaptainPage() {
     }
   };
 
-  // Timer for active request
+  // Timer for active request - countdown and auto-expiration
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (activeRequest && !accepting) {
-      timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            setActiveRequest(null);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
+    if (!activeRequest || accepting) return;
+
+    setCountdown(15);
+
+    const intervalTimer = setInterval(() => {
+      setCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    const timeoutTimer = setTimeout(() => {
+      setActiveRequest(null);
+    }, 15000);
+
+    return () => {
+      clearInterval(intervalTimer);
+      clearTimeout(timeoutTimer);
+    };
   }, [activeRequest, accepting, setActiveRequest]);
 
   const handleAccept = async () => {
@@ -219,10 +252,10 @@ export default function CaptainPage() {
                     </div>
                     <div className="min-w-0">
                       <span className="text-[10px] sm:text-[11px] font-extrabold text-[#FFD600] uppercase tracking-widest block truncate">
-                        Priority Dispatch Alert
+                        {activeRequest.isScheduled ? "⚡ Advance Scheduled Dispatch" : "Priority Dispatch Alert"}
                       </span>
                       <h2 className="text-base sm:text-lg font-black text-white tracking-tight truncate">
-                        {accepting ? "ACCEPTED" : "NEW RIDE REQUEST"}
+                        {accepting ? "ACCEPTED" : activeRequest.isScheduled ? "SCHEDULED RESERVATION" : "NEW RIDE REQUEST"}
                       </h2>
                     </div>
                   </div>
@@ -272,9 +305,16 @@ export default function CaptainPage() {
                         ₹{activeRequest.fare || 148}
                       </span>
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-[#FFD600] text-black uppercase tracking-wide shadow-sm mt-0.5">
-                      <span className="material-symbols-outlined text-[10px] font-bold">bolt</span> Instant
-                    </span>
+                    {activeRequest.isScheduled ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 uppercase tracking-wide shadow-sm mt-0.5">
+                        <span className="material-symbols-outlined text-[10px] font-bold">schedule</span>
+                        Departing Soon
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-[#FFD600] text-black uppercase tracking-wide shadow-sm mt-0.5">
+                        <span className="material-symbols-outlined text-[10px] font-bold">bolt</span> Instant
+                      </span>
+                    )}
                   </div>
                 </div>
 

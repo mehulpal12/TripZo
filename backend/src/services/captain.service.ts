@@ -64,10 +64,16 @@ export const getCaptainScheduledRides = async (userId: string) => {
 
   const rides = await prisma.ride.findMany({
     where: {
-      status: RideStatus.SCHEDULED,
       OR: [
-        { captainId: captain.id },
-        { captainId: null, scheduledAt: { gte: minScheduledTime } },
+        {
+          captainId: captain.id,
+          status: { in: [RideStatus.SCHEDULED, RideStatus.SEARCHING] },
+        },
+        {
+          captainId: null,
+          status: { in: [RideStatus.SCHEDULED, RideStatus.SEARCHING] },
+          scheduledAt: { gte: minScheduledTime },
+        },
       ],
     },
     orderBy: { scheduledAt: 'asc' },
@@ -100,6 +106,76 @@ export const getCaptainScheduledRides = async (userId: string) => {
       totalPotentialFare,
       nextUpcoming,
     },
+  };
+};
+
+export const getCaptainActiveRequest = async (userId: string) => {
+  const captain = await getOrCreateCaptain(userId);
+
+  // If captain is not online/available, they cannot take dispatch requests
+  if (captain.status !== CaptainStatus.AVAILABLE) {
+    return null;
+  }
+
+  // Find active SEARCHING ride (either immediate or scheduled within dispatch window)
+  const now = new Date();
+  const maxScheduledLookahead = new Date(now.getTime() + 25 * 60 * 1000); // Up to 25 mins ahead
+  const minScheduledLookbehind = new Date(now.getTime() - 15 * 60 * 1000);
+
+  const ride = await prisma.ride.findFirst({
+    where: {
+      status: RideStatus.SEARCHING,
+      captainId: null,
+      OR: [
+        { scheduledAt: null }, // Immediate ride
+        { scheduledAt: { gte: minScheduledLookbehind, lte: maxScheduledLookahead } }, // Scheduled ride in dispatch window
+      ],
+      rejections: {
+        none: {
+          captainId: captain.id,
+        },
+      },
+    },
+    orderBy: [
+      { scheduledAt: 'asc' },
+      { createdAt: 'desc' },
+    ],
+    include: {
+      rider: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+        },
+      },
+    },
+  });
+
+  if (!ride) {
+    return null;
+  }
+
+  return {
+    id: ride.id,
+    status: ride.status,
+    pickup: {
+      lat: Number(ride.pickupLat),
+      lng: Number(ride.pickupLng),
+      address: ride.pickupAddress || 'Pickup Location',
+      name: ride.pickupName || ride.pickupAddress || 'Pickup Point',
+    },
+    destination: {
+      lat: Number(ride.destinationLat),
+      lng: Number(ride.destinationLng),
+      address: ride.destinationAddress || 'Destination Location',
+      name: ride.destinationName || ride.destinationAddress || 'Drop Point',
+    },
+    fare: Number(ride.estimatedFare || ride.finalFare || 0),
+    estimatedDistanceM: ride.estimatedDistanceM,
+    estimatedDurationS: ride.estimatedDurationS,
+    scheduledAt: ride.scheduledAt,
+    isScheduled: Boolean(ride.scheduledAt),
+    rider: ride.rider,
   };
 };
 

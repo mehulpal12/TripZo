@@ -16,12 +16,81 @@ import {
   ExternalLink,
   Sparkles,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from "lucide-react";
+import { useCaptainStore } from "@/stores/captain.store";
 
 type ScheduledFilter = "ALL" | "ASSIGNED" | "TODAY";
 
+// Known landmarks in Delhi-NCR for resolving coordinates
+const KNOWN_HUBS = [
+  { lat: 28.6655, lng: 77.2760, name: "Metro Station Gate 2, Shahdara", address: "Metro Station Gate 2, Shahdara, Delhi 110032" },
+  { lat: 28.6750, lng: 77.3000, name: "GTB Enclave, Dilshad Garden", address: "GTB Enclave, Dilshad Garden, Delhi 110095" },
+  { lat: 28.6315, lng: 77.2167, name: "Connaught Place", address: "Inner Circle, Connaught Place, New Delhi 110001" },
+  { lat: 28.5562, lng: 77.1000, name: "IGI Airport Terminal 3", address: "Indira Gandhi International Airport, Terminal 3, New Delhi" },
+  { lat: 28.4986, lng: 77.0898, name: "Cyber City Gurugram", address: "DLF Cyber City, DLF Phase 2, Sector 24, Gurugram" },
+  { lat: 28.5708, lng: 77.3260, name: "Noida Sector 18", address: "Sector 18 Market, Sector 18, Noida, Uttar Pradesh" },
+];
+
+function getResolvedLocation(loc: any, type: "pickup" | "destination") {
+  if (!loc) {
+    return {
+      name: type === "pickup" ? "Pickup Point" : "Drop Point",
+      address: "",
+    };
+  }
+
+  const rawName = (loc.name || "").trim();
+  const rawAddr = (loc.address || "").trim();
+
+  const isGenericName = !rawName || rawName.toLowerCase() === "pickup point" || rawName.toLowerCase() === "drop point";
+  const isGenericAddr = !rawAddr || rawAddr.toLowerCase() === "pickup point" || rawAddr.toLowerCase() === "drop point";
+
+  // If both name and address are meaningful
+  if (!isGenericName && !isGenericAddr) {
+    return {
+      name: rawName,
+      address: rawAddr !== rawName ? rawAddr : "",
+    };
+  }
+
+  // If name is valid but address is generic
+  if (!isGenericName) {
+    return { name: rawName, address: "" };
+  }
+
+  // If address is valid but name is generic
+  if (!isGenericAddr) {
+    return { name: rawAddr, address: "" };
+  }
+
+  // If both are generic, check coordinates against known hubs (~2km tolerance)
+  if (loc.lat && loc.lng) {
+    const lat = Number(loc.lat);
+    const lng = Number(loc.lng);
+    for (const hub of KNOWN_HUBS) {
+      const dLat = Math.abs(hub.lat - lat);
+      const dLng = Math.abs(hub.lng - lng);
+      if (dLat < 0.02 && dLng < 0.02) {
+        return { name: hub.name, address: hub.address };
+      }
+    }
+    return {
+      name: type === "pickup" ? "Pickup Point" : "Drop Point",
+      address: `GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    };
+  }
+
+  return {
+    name: type === "pickup" ? "Pickup Point" : "Drop Point",
+    address: "",
+  };
+}
+
+
 export function CaptainScheduledRides() {
+  const { setActiveRequest, setActiveTab } = useCaptainStore();
   const [rides, setRides] = useState<any[]>([]);
   const [stats, setStats] = useState<CaptainScheduledStats>({
     totalScheduled: 0,
@@ -368,16 +437,23 @@ export function CaptainScheduledRides() {
                       <span>{formatScheduledDate(ride.scheduledAt)}</span>
                     </div>
 
-                    <div
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold ${
-                        imminent
-                          ? "bg-amber-100 text-amber-800 border border-amber-300 animate-pulse"
-                          : "bg-blue-50 text-blue-700 border border-blue-200"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-xs">schedule</span>
-                      <span>{getRelativeCountdown(ride.scheduledAt)}</span>
-                    </div>
+                    {ride.status === 'SEARCHING' ? (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-amber-400 text-black border border-amber-500 shadow-xs animate-pulse">
+                        <Zap className="w-3.5 h-3.5 fill-black" />
+                        <span>DISPATCHING NOW</span>
+                      </div>
+                    ) : (
+                      <div
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold ${
+                          imminent
+                            ? "bg-amber-100 text-amber-800 border border-amber-300 animate-pulse"
+                            : "bg-blue-50 text-blue-700 border border-blue-200"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-xs">schedule</span>
+                        <span>{getRelativeCountdown(ride.scheduledAt)}</span>
+                      </div>
+                    )}
 
                     {isAssigned && (
                       <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -403,44 +479,56 @@ export function CaptainScheduledRides() {
                   </div>
                 </div>
 
-                {/* Middle: Pickup & Destination Waypoints */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2.5">
-                    {/* Pickup */}
-                    <div className="flex items-start gap-2.5">
-                      <div className="mt-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-100 shrink-0"></div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Pickup Location
-                        </span>
-                        <span className="text-xs sm:text-sm font-extrabold text-[#111111] line-clamp-1">
-                          {ride.pickup?.name || ride.pickup?.address || "Pickup Point"}
-                        </span>
-                        {ride.pickup?.address && ride.pickup?.name && (
-                          <span className="text-[11px] text-slate-500 truncate">
-                            {ride.pickup.address}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                {/* Middle: Pickup & Destination Waypoints - Fully visible, untruncated */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                  <div className="lg:col-span-7 flex flex-col gap-3">
+                    {(() => {
+                      const pickupLoc = getResolvedLocation(ride.pickup, "pickup");
+                      const destLoc = getResolvedLocation(ride.destination, "destination");
 
-                    {/* Dropoff */}
-                    <div className="flex items-start gap-2.5">
-                      <div className="mt-0.5 w-3 h-3 rounded-full bg-rose-500 ring-4 ring-rose-100 shrink-0"></div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Destination
-                        </span>
-                        <span className="text-xs sm:text-sm font-extrabold text-[#111111] line-clamp-1">
-                          {ride.destination?.name || ride.destination?.address || "Drop Point"}
-                        </span>
-                        {ride.destination?.address && ride.destination?.name && (
-                          <span className="text-[11px] text-slate-500 truncate">
-                            {ride.destination.address}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                      return (
+                        <>
+                          {/* Pickup */}
+                          <div className="flex items-start gap-3">
+                            <div className="mt-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100 shrink-0"></div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Pickup Location
+                              </span>
+                              <span className="text-xs sm:text-sm font-extrabold text-[#111111] break-words leading-tight">
+                                {pickupLoc.name}
+                              </span>
+                              {pickupLoc.address && (
+                                <span className="text-[11px] sm:text-xs text-slate-500 font-medium break-words mt-0.5 leading-normal">
+                                  {pickupLoc.address}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Connecting route visual line */}
+                          <div className="w-0.5 h-3.5 bg-slate-200 ml-[6px] -my-1.5"></div>
+
+                          {/* Destination */}
+                          <div className="flex items-start gap-3">
+                            <div className="mt-1 w-3.5 h-3.5 rounded-full bg-rose-500 ring-4 ring-rose-100 shrink-0"></div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Destination
+                              </span>
+                              <span className="text-xs sm:text-sm font-extrabold text-[#111111] break-words leading-tight">
+                                {destLoc.name}
+                              </span>
+                              {destLoc.address && (
+                                <span className="text-[11px] sm:text-xs text-slate-500 font-medium break-words mt-0.5 leading-normal">
+                                  {destLoc.address}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Rider Info & Action Card */}
@@ -467,10 +555,34 @@ export function CaptainScheduledRides() {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
-                      <span className="text-[11px] text-slate-500">
-                        Ref: #{ride.id ? ride.id.slice(-6) : "SCHEDULED"}
-                      </span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-500">
+                          Ref: #{ride.id ? ride.id.slice(-6) : "SCHEDULED"}
+                        </span>
+                        {(!ride.captainId && (ride.status === 'SEARCHING' || imminent)) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveRequest({
+                                id: ride.id,
+                                status: "SEARCHING",
+                                pickup: ride.pickup,
+                                destination: ride.destination,
+                                vehicleType: ride.vehicleType || "BIKE",
+                                fare: ride.estimatedFare || ride.finalFare || 0,
+                                isScheduled: true,
+                                scheduledAt: ride.scheduledAt,
+                              });
+                              setActiveTab("cockpit");
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFD600] hover:bg-[#FACC15] text-black text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
+                          >
+                            <Zap className="w-3.5 h-3.5 fill-black" />
+                            <span>Claim in Cockpit ➔</span>
+                          </button>
+                        )}
+                      </div>
 
                       <a
                         href={googleMapsUrl}
@@ -487,12 +599,35 @@ export function CaptainScheduledRides() {
                 </div>
 
                 {/* Footer notes */}
-                {imminent && (
-                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>
-                      Pickup is in less than 15 minutes. Switch to the <strong>Cockpit</strong> tab now to accept the live booking ping as soon as it fires!
-                    </span>
+                {(ride.status === 'SEARCHING' || imminent) && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-amber-900 bg-amber-50 p-2.5 sm:p-3 rounded-xl border border-amber-200">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        {ride.status === 'SEARCHING'
+                          ? "This ride is actively dispatching right now! Claim it in Cockpit to accept."
+                          : "Pickup is in less than 15 minutes. Dispatch window is active!"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveRequest({
+                          id: ride.id,
+                          status: "SEARCHING",
+                          pickup: ride.pickup,
+                          destination: ride.destination,
+                          vehicleType: ride.vehicleType || "BIKE",
+                          fare: ride.estimatedFare || ride.finalFare || 0,
+                          isScheduled: true,
+                          scheduledAt: ride.scheduledAt,
+                        });
+                        setActiveTab("cockpit");
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#FFD600] hover:bg-[#FACC15] text-black font-black text-xs whitespace-nowrap cursor-pointer shrink-0 shadow-sm"
+                    >
+                      Open Cockpit ➔
+                    </button>
                   </div>
                 )}
               </div>
