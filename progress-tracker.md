@@ -5,14 +5,14 @@
 * [x] Phase 0 — Project Understanding
 * [x] Phase 1 — Foundation
 * [x] Phase 2 — Authentication
-* [ ] Phase 3 — Database & Core Ride
-* [ ] Phase 4 — Captain System
-* [ ] Phase 5 — Matching
+* [x] Phase 3 — Database & Core Ride
+* [x] Phase 4 — Captain System
+* [x] Phase 5 — Matching
 * [x] Phase 6 — Real-Time Tracking
-* [ ] Phase 7 — Scheduled Rides
-* [ ] Phase 8 — Payments
-* [ ] Phase 9 — Ratings & Admin
-* [ ] Phase 10 — Full System Verification & Deployment
+* [x] Phase 7 — Scheduled Rides (with T-15 min advance dispatch & 2-way sync)
+* [ ] Phase 8 — Payments (Razorpay / Stripe / Webhooks)
+* [ ] Phase 9 — Ratings & Admin (Fleet telemetry, dispute resolution)
+* [ ] Phase 10 — Full Production Verification & Cloud Deployment
 
 ## Phase 0 — Project Understanding
 
