@@ -628,11 +628,39 @@ export const markCaptainArrived = async (rideId: string, captainUserId: string) 
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified.');
   }
 
-  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+  const updatedRide = await prisma.ride.findUnique({
+    where: { id: rideId },
+    include: {
+      captain: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              phone: true,
+            },
+          },
+        },
+      },
+      rider: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+        },
+      },
+    },
+  });
 
   try {
     const io = getIO();
     io.to(`ride:${rideId}`).emit('ride:captain_arrived', updatedRide);
+    if (updatedRide?.riderId) {
+      io.to(`rider:${updatedRide.riderId}`).emit('ride:captain_arrived', updatedRide);
+    }
+    if (captain?.userId) {
+      io.to(`captain:${captain.userId}`).emit('ride:captain_arrived', updatedRide);
+    }
   } catch (err) {
     console.error('Socket broadcast error:', err);
   }
@@ -672,11 +700,39 @@ export const startRide = async (rideId: string, captainUserId: string) => {
     throw new AppError('CONCURRENCY_ERROR', 409, 'Ride state was modified.');
   }
 
-  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+  const updatedRide = await prisma.ride.findUnique({
+    where: { id: rideId },
+    include: {
+      captain: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              phone: true,
+            },
+          },
+        },
+      },
+      rider: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+        },
+      },
+    },
+  });
 
   try {
     const io = getIO();
     io.to(`ride:${rideId}`).emit('ride:started', updatedRide);
+    if (updatedRide?.riderId) {
+      io.to(`rider:${updatedRide.riderId}`).emit('ride:started', updatedRide);
+    }
+    if (captain?.userId) {
+      io.to(`captain:${captain.userId}`).emit('ride:started', updatedRide);
+    }
   } catch (err) {
     console.error('Socket broadcast error:', err);
   }
@@ -730,11 +786,39 @@ export const completeRide = async (rideId: string, captainUserId: string) => {
     await redisClient.del(`ride_assignment:${captainUserId}`);
   }
 
-  const updatedRide = await prisma.ride.findUnique({ where: { id: rideId } });
+  const updatedRide = await prisma.ride.findUnique({
+    where: { id: rideId },
+    include: {
+      captain: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              phone: true,
+            },
+          },
+        },
+      },
+      rider: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+        },
+      },
+    },
+  });
 
   try {
     const io = getIO();
     io.to(`ride:${rideId}`).emit('ride:completed', updatedRide);
+    if (updatedRide?.riderId) {
+      io.to(`rider:${updatedRide.riderId}`).emit('ride:completed', updatedRide);
+    }
+    if (captain?.userId) {
+      io.to(`captain:${captain.userId}`).emit('ride:completed', updatedRide);
+    }
   } catch (err) {
     console.error('Socket broadcast error:', err);
   }

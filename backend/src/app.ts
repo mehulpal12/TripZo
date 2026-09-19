@@ -19,14 +19,40 @@ app.use((req, res, next) => {
 });
 
 // Middleware
-app.use(helmet());
-app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+app.use(helmet({ crossOriginResourcePolicy: false }));
+
+// Permissive dynamic CORS for development & LAN mobile access
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Allow localhost, 127.0.0.1, private LAN ranges (192.168.x.x, 10.x.x.x, 172.16-31.x.x), or in dev
+      const isAllowed =
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
+        /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin) ||
+        /^https?:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+(:\d+)?$/.test(origin) ||
+        origin === env.CORS_ORIGIN ||
+        process.env.NODE_ENV !== 'production';
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-// Rate limiters
+// Rate limiters (relaxed in development for multi-device testing)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 requests per IP
+  max: process.env.NODE_ENV === 'production' ? 20 : 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Please try again later.' } },
@@ -34,7 +60,7 @@ const authLimiter = rateLimit({
 
 const rideLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute
+  max: process.env.NODE_ENV === 'production' ? 30 : 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many ride requests. Please try again later.' } },

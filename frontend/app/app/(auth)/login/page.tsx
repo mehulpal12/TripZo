@@ -53,7 +53,7 @@ export default function LoginPage() {
           Enter your credentials to access your mobility dashboard
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} suppressHydrationWarning>
         <CardContent className="space-y-4 mt-4">
           {error && (
             <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
@@ -86,6 +86,8 @@ export default function LoginPage() {
               type="email" 
               placeholder="pilot@tripzo.com" 
               required 
+              autoComplete="email"
+              suppressHydrationWarning
               className="bg-background/50 border-input/50 focus-visible:ring-primary/50"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -97,6 +99,8 @@ export default function LoginPage() {
               id="password" 
               type="password" 
               required
+              autoComplete="current-password"
+              suppressHydrationWarning
               className="bg-background/50 border-input/50 focus-visible:ring-primary/50"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}

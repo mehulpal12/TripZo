@@ -101,6 +101,22 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
   try {
     const { refreshToken } = req.body;
 
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      throw new AppError('INVALID_TOKEN', 400, 'Refresh token is required');
+    }
+
+    // 1. Concurrency absorbing: If this refresh token was already refreshed in the last 15 seconds,
+    // return the cached token pair instead of throwing an error or logging out.
+    if (redisClient.isReady) {
+      const cached = await redisClient.get(`recent_refresh:${refreshToken}`);
+      if (cached) {
+        return res.status(200).json({
+          success: true,
+          data: JSON.parse(cached),
+        });
+      }
+    }
+
     const session = await prisma.refreshSession.findUnique({
       where: { token: refreshToken },
       include: { user: true },
@@ -108,7 +124,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
     if (!session || session.expiresAt < new Date()) {
       if (session) {
-        await prisma.refreshSession.delete({ where: { id: session.id } });
+        await prisma.refreshSession.deleteMany({ where: { id: session.id } });
       }
       throw new AppError('INVALID_TOKEN', 401, 'Invalid or expired refresh token');
     }
@@ -117,23 +133,49 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     const newRefreshTokenString = crypto.randomBytes(40).toString('hex');
     const expiresInMs = ms(env.REFRESH_TOKEN_EXPIRES_IN as any);
 
-    await prisma.$transaction([
-      prisma.refreshSession.delete({ where: { id: session.id } }),
-      prisma.refreshSession.create({
-        data: {
-          token: newRefreshTokenString,
-          userId: session.user.id,
-          expiresAt: new Date(Date.now() + expiresInMs),
-        },
-      }),
-    ]);
+    // Atomically delete the old session. Using deleteMany prevents P2025 exceptions.
+    const deleted = await prisma.refreshSession.deleteMany({
+      where: { id: session.id },
+    });
+
+    if (deleted.count === 0) {
+      // Check if another concurrent thread completed the refresh
+      if (redisClient.isReady) {
+        const cached = await redisClient.get(`recent_refresh:${refreshToken}`);
+        if (cached) {
+          return res.status(200).json({
+            success: true,
+            data: JSON.parse(cached),
+          });
+        }
+      }
+      throw new AppError('INVALID_TOKEN', 401, 'Invalid or expired refresh token');
+    }
+
+    // Create the rotated refresh session
+    await prisma.refreshSession.create({
+      data: {
+        token: newRefreshTokenString,
+        userId: session.user.id,
+        expiresAt: new Date(Date.now() + expiresInMs),
+      },
+    });
+
+    const responsePayload = {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshTokenString,
+    };
+
+    // Cache with a 15-second grace period in Redis to absorb concurrent race requests
+    if (redisClient.isReady) {
+      await redisClient
+        .set(`recent_refresh:${refreshToken}`, JSON.stringify(responsePayload), { EX: 15 })
+        .catch(() => {});
+    }
 
     res.status(200).json({
       success: true,
-      data: {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshTokenString,
-      },
+      data: responsePayload,
     });
   } catch (error) {
     next(error);

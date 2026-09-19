@@ -1,8 +1,7 @@
-"use client";
-
 import { useEffect, useRef } from "react";
 import { socketClient } from "@/lib/socket/socket.client";
 import { useCaptainStore } from "@/stores/captain.store";
+import { getUserCurrentLocation } from "@/lib/location/geolocation.service";
 
 // Helper: Calculate distance in meters between two lat/lng pairs (Haversine formula)
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -61,10 +60,27 @@ export function useCaptainSocket() {
 
     socket.on("ride:new", handleNewRide);
 
+    // Immediately acquire and broadcast initial location as captain gets online
+    getUserCurrentLocation()
+      .then((loc) => {
+        setCaptainLocation({ lat: loc.lat, lng: loc.lng });
+        setIsGpsActive(true);
+        if (socket?.connected) {
+          socket.emit("captain:location", {
+            lat: loc.lat,
+            lng: loc.lng,
+            timestamp: Date.now(),
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("Initial captain location fetch error:", err);
+      });
+
     return () => {
       socket.off("ride:new", handleNewRide);
     };
-  }, [isOnline, setActiveRequest]);
+  }, [isOnline, setActiveRequest, setCaptainLocation, setIsGpsActive]);
 
   // 2. Real-Time Browser Geolocation Watcher (navigator.geolocation.watchPosition)
   useEffect(() => {
@@ -130,21 +146,28 @@ export function useCaptainSocket() {
     };
 
     const handleError = (error: GeolocationPositionError) => {
-      setIsGpsActive(false);
+      // Fallback to IP/network location so captain can still navigate and receive rides
+      getUserCurrentLocation().then((loc) => {
+        setCaptainLocation({ lat: loc.lat, lng: loc.lng });
+        setIsGpsActive(true);
+      }).catch(() => {
+        setIsGpsActive(false);
+      });
+
       switch (error.code) {
         case error.PERMISSION_DENIED:
           setLocationError(
-            "GPS location permission denied. Please allow location access in your browser to broadcast your position."
+            "Device GPS restricted on HTTP. Using network location. (Tip: Use HTTPS or chrome://flags for hardware GPS)"
           );
           break;
         case error.POSITION_UNAVAILABLE:
-          setLocationError("GPS location unavailable. Please check your device location settings.");
+          setLocationError("GPS signal weak. Using network location.");
           break;
         case error.TIMEOUT:
-          setLocationError("GPS location request timed out. Acquiring signal...");
+          setLocationError("GPS signal timed out. Using network location.");
           break;
         default:
-          setLocationError(`Location error: ${error.message}`);
+          setLocationError(`Location note: ${error.message}`);
           break;
       }
     };

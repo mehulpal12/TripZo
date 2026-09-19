@@ -22,7 +22,7 @@ export default function RegisterPage() {
     email: "rider@tripzo.com",
     password: "password123",
     role: "RIDER",
-    phone: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
+    phone: "9876543210",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,7 +49,7 @@ export default function RegisterPage() {
           Create your mobility profile
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} suppressHydrationWarning>
         <CardContent className="space-y-4 mt-4">
           {error && (
             <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
@@ -81,6 +81,8 @@ export default function RegisterPage() {
             <Input 
               id="name" 
               placeholder="John Doe" 
+              autoComplete="name"
+              suppressHydrationWarning
               className="bg-background/50 border-input/50 focus-visible:ring-primary/50"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -94,6 +96,8 @@ export default function RegisterPage() {
               type="email" 
               placeholder="pilot@tripzo.com" 
               required 
+              autoComplete="email"
+              suppressHydrationWarning
               className="bg-background/50 border-input/50 focus-visible:ring-primary/50"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -106,6 +110,8 @@ export default function RegisterPage() {
               id="password" 
               type="password" 
               required
+              autoComplete="new-password"
+              suppressHydrationWarning
               className="bg-background/50 border-input/50 focus-visible:ring-primary/50"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}

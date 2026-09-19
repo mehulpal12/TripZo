@@ -12,8 +12,11 @@ let io: SocketIOServer;
 export const initializeSocket = async (httpServer: HttpServer) => {
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: '*', // Adjust for production
+      origin: (origin, callback) => {
+        callback(null, true);
+      },
       methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 
@@ -158,8 +161,20 @@ export const initializeSocket = async (httpServer: HttpServer) => {
         }
 
         // 3. Stale Location Protection
-        const storedTimestamp = await redisClient.hGet('captain_location_meta', user.userId);
-        if (storedTimestamp && timestamp <= parseInt(storedTimestamp, 10)) {
+        const storedMeta = await redisClient.hGet('captain_location_meta', user.userId);
+        let storedTimestamp = 0;
+        if (storedMeta) {
+          if (storedMeta.startsWith('{')) {
+            try {
+              storedTimestamp = Number(JSON.parse(storedMeta).updatedAt) || 0;
+            } catch {
+              storedTimestamp = 0;
+            }
+          } else {
+            storedTimestamp = parseInt(storedMeta, 10) || 0;
+          }
+        }
+        if (storedTimestamp > 0 && timestamp <= storedTimestamp) {
           return; // Reject older event
         }
 

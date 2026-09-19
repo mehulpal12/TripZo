@@ -5,6 +5,7 @@ import { useRideStore, Ride } from "@/stores/ride.store";
 import { rideService, LocationData } from "@/lib/api/ride.service";
 import { MOCK_RIDER_LOCATION, MOCK_DESTINATION_LOCATION } from "@/config/mockLocation";
 import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
+import { getUserCurrentLocation } from "@/lib/location/geolocation.service";
 import { 
   CalendarClock, 
   Clock, 
@@ -88,14 +89,26 @@ export function RiderScheduledRides() {
     }
   }, [isLoaded]);
 
-  // Set default locations in store once on mount if empty
+  // Acquire current location on mount if empty
   useEffect(() => {
+    let isMounted = true;
     if (!pickup) {
-      setPickup(MOCK_RIDER_LOCATION);
+      getUserCurrentLocation()
+        .then((loc) => {
+          if (!isMounted) return;
+          setPickup(loc);
+          setPickupText(loc.address || loc.name || "");
+        })
+        .catch(() => {
+          if (isMounted) setPickup(MOCK_RIDER_LOCATION);
+        });
     }
     if (!destination) {
       setDestination(MOCK_DESTINATION_LOCATION);
     }
+    return () => {
+      isMounted = false;
+    };
   }, []); // Run once on mount
 
   // Sync input text with store changes (e.g. from GPS or outside selection)
@@ -288,58 +301,17 @@ export function RiderScheduledRides() {
   };
 
   // Live GPS geolocation
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
     setGpsLoading(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          if (!geocoderRef.current && window.google?.maps?.Geocoder) {
-            geocoderRef.current = new window.google.maps.Geocoder();
-          }
-
-          if (geocoderRef.current) {
-            geocoderRef.current.geocode({ location: coords }, (results, status) => {
-              setGpsLoading(false);
-              const address = (status === "OK" && results?.[0]?.formatted_address)
-                ? results[0].formatted_address
-                : `Current GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`;
-              const loc: LocationData = {
-                lat: coords.lat,
-                lng: coords.lng,
-                address,
-                name: "Current Location",
-              };
-              setPickup(loc);
-              setPickupText(address);
-              setShowPickupSuggestions(false);
-            });
-          } else {
-            setGpsLoading(false);
-            const loc: LocationData = {
-              lat: coords.lat,
-              lng: coords.lng,
-              address: "Current Location (GPS)",
-              name: "Current Location",
-            };
-            setPickup(loc);
-            setPickupText("Current Location (GPS)");
-            setShowPickupSuggestions(false);
-          }
-        },
-        () => {
-          setGpsLoading(false);
-          setPickup(MOCK_RIDER_LOCATION);
-          setPickupText(MOCK_RIDER_LOCATION.address);
-          setShowPickupSuggestions(false);
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-    } else {
-      setGpsLoading(false);
-      setPickup(MOCK_RIDER_LOCATION);
-      setPickupText(MOCK_RIDER_LOCATION.address);
+    try {
+      const loc = await getUserCurrentLocation(true);
+      setPickup(loc);
+      setPickupText(loc.address || loc.name || "");
       setShowPickupSuggestions(false);
+    } catch (err) {
+      console.warn("Location error:", err);
+    } finally {
+      setGpsLoading(false);
     }
   };
 
@@ -632,6 +604,7 @@ export function RiderScheduledRides() {
                       <input
                         type="text"
                         placeholder="Search pickup location or use GPS..."
+                        suppressHydrationWarning
                         className="w-full bg-transparent text-slate-100 font-extrabold text-sm sm:text-base placeholder-slate-400 outline-none border-none p-0 focus:ring-0"
                         value={pickupText}
                         onChange={(e) => {
@@ -757,6 +730,7 @@ export function RiderScheduledRides() {
                       <input
                         type="text"
                         placeholder="Search destination or landmark..."
+                        suppressHydrationWarning
                         className="w-full bg-transparent text-slate-100 font-extrabold text-sm sm:text-base placeholder-slate-400 outline-none border-none p-0 focus:ring-0"
                         value={destText}
                         onChange={(e) => {
@@ -890,6 +864,7 @@ export function RiderScheduledRides() {
                   type="datetime-local"
                   min={getMinDatetime()}
                   value={selectedDatetime}
+                  suppressHydrationWarning
                   onChange={(e) => setSelectedDatetime(e.target.value)}
                   className="w-full h-11 px-3 rounded-xl bg-muted/60 border border-border text-foreground font-semibold text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all cursor-pointer"
                 />

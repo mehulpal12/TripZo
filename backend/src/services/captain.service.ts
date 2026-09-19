@@ -17,7 +17,12 @@ export const getOrCreateCaptain = async (userId: string) => {
   });
 };
 
-export const setCaptainStatus = async (userId: string, status: CaptainStatus) => {
+export const setCaptainStatus = async (
+  userId: string,
+  status: CaptainStatus,
+  lat?: number,
+  lng?: number
+) => {
   // Use upsert to auto-create the captain profile if it doesn't exist for this user
   const captain = await getOrCreateCaptain(userId);
 
@@ -31,12 +36,38 @@ export const setCaptainStatus = async (userId: string, status: CaptainStatus) =>
     data: { status },
   });
 
+  // Immediately register captain coordinates in Redis if provided when going online
+  if (
+    status === CaptainStatus.AVAILABLE &&
+    redisClient.isReady &&
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng)
+  ) {
+    await Promise.all([
+      redisClient.geoAdd('captain_locations', {
+        member: userId,
+        latitude: lat,
+        longitude: lng,
+      }),
+      redisClient.hSet(
+        'captain_location_meta',
+        userId,
+        JSON.stringify({
+          vehicleType: updatedCaptain.vehicleType,
+          updatedAt: Date.now(),
+        })
+      ),
+    ]).catch((err) => console.error('Failed to register captain in Redis on ONLINE:', err));
+  }
+
   // Explicitly clean up Redis if going offline
   if (status === CaptainStatus.OFFLINE && redisClient.isReady) {
     await Promise.all([
       redisClient.zRem('captain_locations', userId),
-      redisClient.hDel('captain_location_meta', userId)
-    ]).catch(err => console.error("Failed to clean up captain from Redis on OFFLINE:", err));
+      redisClient.hDel('captain_location_meta', userId),
+    ]).catch((err) => console.error('Failed to clean up captain from Redis on OFFLINE:', err));
   }
 
   return updatedCaptain;

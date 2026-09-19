@@ -31,8 +31,21 @@ export const getNearbyCaptains = async (
   const staleMembers: string[] = [];
 
   nearbyMembers.forEach((member, i) => {
-    const ts = timestamps[i];
-    if (!ts || parseInt(ts, 10) < staleThreshold) {
+    const rawTs = timestamps[i];
+    let ts = 0;
+    if (rawTs) {
+      if (rawTs.startsWith('{')) {
+        try {
+          ts = Number(JSON.parse(rawTs).updatedAt) || 0;
+        } catch {
+          ts = 0;
+        }
+      } else {
+        ts = parseInt(rawTs, 10) || 0;
+      }
+    }
+
+    if (!ts || ts < staleThreshold) {
       staleMembers.push(member);
     } else {
       activeMembers.push(member);

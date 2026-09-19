@@ -23,8 +23,8 @@ const startServer = async () => {
     logger.error('Failed to init reconciliation job', err);
   });
 
-  server.listen(env.PORT, () => {
-    logger.info(`Server listening on port ${env.PORT} in ${env.NODE_ENV} mode`);
+  server.listen(Number(env.PORT), '0.0.0.0', () => {
+    logger.info(`Server listening on port ${env.PORT} (0.0.0.0) in ${env.NODE_ENV} mode`);
   });
 
   const httpTerminator = createHttpTerminator({ server });

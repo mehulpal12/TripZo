@@ -7,6 +7,8 @@ import { captainService } from "@/lib/api/captain.service";
 import { useCaptainSocket } from "@/hooks/useCaptainSocket";
 import { CaptainRideHistory } from "@/features/captain/CaptainRideHistory";
 import { CaptainScheduledRides } from "@/features/captain/CaptainScheduledRides";
+import { getUserCurrentLocation } from "@/lib/location/geolocation.service";
+import { socketClient } from "@/lib/socket/socket.client";
 
 const CaptainMapContainer = dynamic(
   () => import("@/components/map/CaptainMapContainer").then((mod) => mod.CaptainMapContainer),
@@ -31,14 +33,37 @@ export default function CaptainPage() {
     setActiveRide,
     activeTab,
     setActiveTab,
+    captainLocation,
+    setCaptainLocation,
+    setIsGpsActive,
   } = useCaptainStore();
 
   const [countdown, setCountdown] = useState(15);
   const [accepting, setAccepting] = useState(false);
   const [updatingRide, setUpdatingRide] = useState(false);
+  const [togglingOnline, setTogglingOnline] = useState(false);
 
   // Initialize socket and simulator
   useCaptainSocket();
+
+  // Proactively acquire captain current location on initial page load
+  useEffect(() => {
+    let isMounted = true;
+    if (!captainLocation) {
+      getUserCurrentLocation()
+        .then((loc) => {
+          if (!isMounted) return;
+          setCaptainLocation({ lat: loc.lat, lng: loc.lng });
+          setIsGpsActive(true);
+        })
+        .catch((err) => {
+          console.warn("Pre-online location acquisition warning:", err);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [captainLocation, setCaptainLocation, setIsGpsActive]);
 
   // Auto-switch to Cockpit if a new incoming ride request or active ride appears
   useEffect(() => {
@@ -103,17 +128,42 @@ export default function CaptainPage() {
       setActiveRequest(null);
     }
 
+    setTogglingOnline(true);
     try {
       if (checked) {
-        await captainService.setOnline();
+        // 1. FIRST get the current location of the captain as they get online
+        let loc = captainLocation;
+        try {
+          loc = await getUserCurrentLocation(true);
+          setCaptainLocation({ lat: loc.lat, lng: loc.lng });
+          setIsGpsActive(true);
+        } catch (locErr) {
+          console.warn("Failed to refresh live location before going online:", locErr);
+        }
+
+        // 2. Call backend to set online with the acquired coordinates
+        await captainService.setOnline(loc ? { lat: loc.lat, lng: loc.lng } : undefined);
         setOnline(true);
+
+        // 3. Immediately emit location via socket
+        const socket = socketClient.getSocket();
+        if (socket?.connected && loc) {
+          socket.emit("captain:location", {
+            lat: loc.lat,
+            lng: loc.lng,
+            timestamp: Date.now(),
+          });
+        }
       } else {
         await captainService.setOffline();
         setOnline(false);
+        setIsGpsActive(false);
       }
     } catch (error) {
       console.error("Failed to update captain online status", error);
       alert("Network error updating captain status");
+    } finally {
+      setTogglingOnline(false);
     }
   };
 
@@ -178,21 +228,23 @@ export default function CaptainPage() {
                   ? "bg-[#111111] border-[#111111] text-white"
                   : "bg-slate-200 border-slate-300 text-slate-500"
               } shadow-md transition-all border-2 active:scale-[0.98] ${
-                activeRide ? "opacity-50 cursor-not-allowed" : ""
+                activeRide || togglingOnline ? "opacity-60 cursor-not-allowed" : ""
               }`}
               onClick={() => handleOnlineToggle(!isOnline)}
-              disabled={!!activeRide}
+              disabled={!!activeRide || togglingOnline}
             >
               <div className="flex items-center gap-2.5 sm:gap-3">
                 <div className="relative flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6">
-                  {isOnline && (
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFD600] opacity-70"></span>
+                  {togglingOnline ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-[#FFD600] border-t-transparent animate-spin" />
+                  ) : isOnline ? (
+                    <>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFD600] opacity-70"></span>
+                      <span className="relative inline-flex rounded-full h-3 sm:h-3.5 w-3 sm:w-3.5 bg-[#FFD600] shadow-[0_0_10px_#FFD600]"></span>
+                    </>
+                  ) : (
+                    <span className="relative inline-flex rounded-full h-3 sm:h-3.5 w-3 sm:w-3.5 bg-slate-400"></span>
                   )}
-                  <span
-                    className={`relative inline-flex rounded-full h-3 sm:h-3.5 w-3 sm:w-3.5 ${
-                      isOnline ? "bg-[#FFD600] shadow-[0_0_10px_#FFD600]" : "bg-slate-400"
-                    }`}
-                  ></span>
                 </div>
                 <div className="flex flex-col text-left">
                   <span
@@ -203,7 +255,11 @@ export default function CaptainPage() {
                     STATUS
                   </span>
                   <span className="text-xs sm:text-sm font-black tracking-tight leading-tight">
-                    {isOnline ? "ONLINE • RECEIVING TRIPS" : "OFFLINE • STANDBY"}
+                    {togglingOnline
+                      ? "ACQUIRING GPS..."
+                      : isOnline
+                      ? "ONLINE • RECEIVING TRIPS"
+                      : "OFFLINE • STANDBY"}
                   </span>
                 </div>
               </div>
@@ -592,7 +648,7 @@ export default function CaptainPage() {
                         setUpdatingRide(true);
                         try {
                           const res = await captainService.updateRideStatus(activeRide.id, "CAPTAIN_ARRIVED");
-                          setActiveRide(res.ride);
+                          setActiveRide({ ...activeRide, ...res.ride });
                         } catch (err: any) {
                           console.error("Failed to mark arrived:", err);
                           alert(err?.response?.data?.message || "Failed to mark arrival");
@@ -614,7 +670,7 @@ export default function CaptainPage() {
                         setUpdatingRide(true);
                         try {
                           const res = await captainService.updateRideStatus(activeRide.id, "IN_PROGRESS");
-                          setActiveRide(res.ride);
+                          setActiveRide({ ...activeRide, ...res.ride });
                         } catch (err: any) {
                           console.error("Failed to start trip:", err);
                           alert(err?.response?.data?.message || "Failed to start trip");

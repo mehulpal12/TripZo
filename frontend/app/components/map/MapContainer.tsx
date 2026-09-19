@@ -78,14 +78,43 @@ export default function MapContainer() {
     }
   }, [map, showTraffic]);
 
-  // Fetch directions between pickup and destination
+  const isCaptainArriving = Boolean(
+    activeRide && (activeRide.status === "CAPTAIN_ASSIGNED" || activeRide.status === "CAPTAIN_ARRIVING")
+  );
+  const isTripInProgress = Boolean(activeRide && activeRide.status === "IN_PROGRESS");
+
+  // Dynamically select route origin and destination based on active ride phase
+  const routeOrigin = useMemo(() => {
+    if (isCaptainArriving && activeRide?.captainLocation) {
+      return activeRide.captainLocation;
+    }
+    return effectivePickup;
+  }, [isCaptainArriving, activeRide?.captainLocation, effectivePickup]);
+
+  const routeDestination = useMemo(() => {
+    if (isCaptainArriving) {
+      return effectivePickup;
+    }
+    return effectiveDestination;
+  }, [isCaptainArriving, effectivePickup, effectiveDestination]);
+
+  // Fetch directions between route endpoints
   useEffect(() => {
     if (
       !isLoaded ||
       typeof window === "undefined" ||
       typeof window.google?.maps?.DirectionsService !== "function" ||
-      !effectivePickup ||
-      !effectiveDestination
+      !routeOrigin ||
+      !routeDestination
+    ) {
+      setDirections(null);
+      return;
+    }
+
+    // Skip routing if origin and destination are identical
+    if (
+      Math.abs(routeOrigin.lat - routeDestination.lat) < 0.0001 &&
+      Math.abs(routeOrigin.lng - routeDestination.lng) < 0.0001
     ) {
       setDirections(null);
       return;
@@ -95,8 +124,8 @@ export default function MapContainer() {
 
     directionsService.route(
       {
-        origin: { lat: effectivePickup.lat, lng: effectivePickup.lng },
-        destination: { lat: effectiveDestination.lat, lng: effectiveDestination.lng },
+        origin: { lat: routeOrigin.lat, lng: routeOrigin.lng },
+        destination: { lat: routeDestination.lat, lng: routeDestination.lng },
         travelMode: window.google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
@@ -105,8 +134,8 @@ export default function MapContainer() {
 
           if (map && typeof window.google?.maps?.LatLngBounds === "function") {
             const bounds = new window.google.maps.LatLngBounds();
-            bounds.extend(effectivePickup);
-            bounds.extend(effectiveDestination);
+            bounds.extend(routeOrigin);
+            bounds.extend(routeDestination);
             if (activeRide?.captainLocation) {
               bounds.extend(activeRide.captainLocation);
             }
@@ -115,7 +144,7 @@ export default function MapContainer() {
         }
       }
     );
-  }, [isLoaded, effectivePickup, effectiveDestination, map, activeRide?.captainLocation]);
+  }, [isLoaded, routeOrigin, routeDestination, map, activeRide?.captainLocation]);
 
   // High-contrast self-contained SVG markers
   const riderMarkerIcon = useMemo(() => {

@@ -9,6 +9,7 @@ import { useRideStore } from "@/stores/ride.store";
 import { rideService, LocationData } from "@/lib/api/ride.service";
 import { MOCK_RIDER_LOCATION, MOCK_DESTINATION_LOCATION } from "@/config/mockLocation";
 import { MapPin, Navigation, Bike, Car, Loader2, Crosshair, X, Search, CalendarClock } from "lucide-react";
+import { getUserCurrentLocation } from "@/lib/location/geolocation.service";
 
 // Fallback landmarks across Delhi-NCR if Places API is idle
 const DEFAULT_POPULAR_HUBS: (LocationData & { tag: string })[] = [
@@ -53,6 +54,29 @@ export function BookingPanel() {
       geocoderRef.current = new window.google.maps.Geocoder();
     }
   }, [isLoaded]);
+ 
+  // Automatically acquire current user location as default pickup if not already set
+  useEffect(() => {
+    let isMounted = true;
+    if (!pickup) {
+      setGpsLoading(true);
+      getUserCurrentLocation()
+        .then((loc) => {
+          if (!isMounted) return;
+          setPickup(loc);
+          setPickupText(loc.address || loc.name || "");
+        })
+        .catch((err) => {
+          console.warn("Auto-location acquisition warning:", err);
+        })
+        .finally(() => {
+          if (isMounted) setGpsLoading(false);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Sync input text with store changes (e.g. from GPS or initial load)
   useEffect(() => {
@@ -288,62 +312,18 @@ export function BookingPanel() {
   };
 
   // Live GPS geolocation
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
     setGpsLoading(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          if (!geocoderRef.current && window.google?.maps?.Geocoder) {
-            geocoderRef.current = new window.google.maps.Geocoder();
-          }
-
-          if (geocoderRef.current) {
-            geocoderRef.current.geocode({ location: coords }, (results, status) => {
-              setGpsLoading(false);
-              const address = (status === "OK" && results?.[0]?.formatted_address)
-                ? results[0].formatted_address
-                : `Current GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`;
-              const loc: LocationData = {
-                lat: coords.lat,
-                lng: coords.lng,
-                address,
-                name: "Current Location",
-              };
-              setPickup(loc);
-              setPickupText(address);
-              setShowPickupSuggestions(false);
-              if (destination) fetchFare(destination, loc);
-            });
-          } else {
-            setGpsLoading(false);
-            const loc: LocationData = {
-              lat: coords.lat,
-              lng: coords.lng,
-              address: "Current Location (GPS)",
-              name: "Current Location",
-            };
-            setPickup(loc);
-            setPickupText("Current Location (GPS)");
-            setShowPickupSuggestions(false);
-            if (destination) fetchFare(destination, loc);
-          }
-        },
-        () => {
-          setGpsLoading(false);
-          setPickup(MOCK_RIDER_LOCATION);
-          setPickupText(MOCK_RIDER_LOCATION.address);
-          setShowPickupSuggestions(false);
-          if (destination) fetchFare(destination, MOCK_RIDER_LOCATION);
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-    } else {
-      setGpsLoading(false);
-      setPickup(MOCK_RIDER_LOCATION);
-      setPickupText(MOCK_RIDER_LOCATION.address);
+    try {
+      const loc = await getUserCurrentLocation(true);
+      setPickup(loc);
+      setPickupText(loc.address || loc.name || "");
       setShowPickupSuggestions(false);
-      if (destination) fetchFare(destination, MOCK_RIDER_LOCATION);
+      if (destination) fetchFare(destination, loc);
+    } catch (err) {
+      console.warn("Location acquisition error:", err);
+    } finally {
+      setGpsLoading(false);
     }
   };
 

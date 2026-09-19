@@ -76,13 +76,16 @@ export function CaptainMapContainer() {
             lng: Number(activeRide.destination.lng),
           },
           targetAddress: activeRide.destination.address || activeRide.destination.name || "Destination Dropoff",
-          originLocation: currentCaptainPos,
+          originLocation: captainLocation ? currentCaptainPos : {
+            lat: Number(activeRide.pickup.lat),
+            lng: Number(activeRide.pickup.lng),
+          },
         };
       } else {
         // CAPTAIN_ASSIGNED, CAPTAIN_ARRIVING, CAPTAIN_ARRIVED
         return {
           phase: "PICKUP" as const,
-          badge: activeRide.status === "CAPTAIN_ARRIVED" ? "ARRIVED AT PICKUP" : "STEP 1: HEADING TO PICKUP",
+          badge: activeRide.status === "CAPTAIN_ARRIVED" ? "ARRIVED AT PICKUP · AWAITING RIDER" : "STEP 1: HEADING TO PICKUP",
           targetLocation: {
             lat: Number(activeRide.pickup.lat),
             lng: Number(activeRide.pickup.lng),
@@ -116,7 +119,7 @@ export function CaptainMapContainer() {
       targetAddress: "",
       originLocation: currentCaptainPos,
     };
-  }, [activeRide, activeRequest, currentCaptainPos, isOnline]);
+  }, [activeRide, activeRequest, currentCaptainPos, captainLocation, isOnline]);
 
   const onLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
@@ -160,9 +163,13 @@ export function CaptainMapContainer() {
       return;
     }
 
-    const routeKey = `${navState.phase}_${navState.targetLocation.lat}_${navState.targetLocation.lng}`;
+    const originLat = navState.originLocation.lat.toFixed(4);
+    const originLng = navState.originLocation.lng.toFixed(4);
+    const targetLat = navState.targetLocation.lat.toFixed(4);
+    const targetLng = navState.targetLocation.lng.toFixed(4);
+    const routeKey = `${navState.phase}_${originLat},${originLng}_TO_${targetLat},${targetLng}`;
 
-    // Only re-route if phase/target changes (prevents spamming Directions API on live GPS ticks)
+    // Only re-route if phase or coordinate endpoints change
     if (lastRoutedKeyRef.current === routeKey && directions) {
       return;
     }
@@ -224,7 +231,8 @@ export function CaptainMapContainer() {
       alert("No active destination to navigate to.");
       return;
     }
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${currentCaptainPos.lat},${currentCaptainPos.lng}&destination=${navState.targetLocation.lat},${navState.targetLocation.lng}&travelmode=driving`;
+    // Omitting explicit origin lets Google Maps app on device use current live GPS automatically
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${navState.targetLocation.lat},${navState.targetLocation.lng}&travelmode=driving`;
     window.open(url, "_blank");
   };
 
@@ -356,23 +364,41 @@ export function CaptainMapContainer() {
         )}
 
         {/* Pickup Marker */}
-        {(navState.phase === "PICKUP" || navState.phase === "REQUEST") && navState.targetLocation && (
+        {activeRide?.pickup && (
           <Marker
-            position={navState.phase === "REQUEST" ? navState.originLocation : navState.targetLocation}
+            position={{ lat: Number(activeRide.pickup.lat), lng: Number(activeRide.pickup.lng) }}
             icon={pickupMarkerIcon}
-            zIndex={90}
-            title={`Pickup: ${navState.targetAddress}`}
+            zIndex={navState.phase === "PICKUP" ? 95 : 85}
+            title={`Pickup: ${activeRide.pickup.address || activeRide.pickup.name || "Pickup Point"}`}
           />
         )}
 
         {/* Dropoff Marker */}
-        {(navState.phase === "DROPOFF" || navState.phase === "REQUEST") && (
+        {activeRide?.destination && (
           <Marker
-            position={navState.targetLocation!}
+            position={{ lat: Number(activeRide.destination.lat), lng: Number(activeRide.destination.lng) }}
             icon={dropoffMarkerIcon}
-            zIndex={90}
-            title={`Destination: ${navState.targetAddress}`}
+            zIndex={navState.phase === "DROPOFF" ? 95 : 85}
+            title={`Destination: ${activeRide.destination.address || activeRide.destination.name || "Destination Dropoff"}`}
           />
+        )}
+
+        {/* Incoming Request Markers */}
+        {activeRequest && !activeRide && (
+          <>
+            <Marker
+              position={{ lat: Number(activeRequest.pickup.lat), lng: Number(activeRequest.pickup.lng) }}
+              icon={pickupMarkerIcon}
+              zIndex={90}
+              title={`Pickup: ${activeRequest.pickup.address || "Pickup"}`}
+            />
+            <Marker
+              position={{ lat: Number(activeRequest.destination.lat), lng: Number(activeRequest.destination.lng) }}
+              icon={dropoffMarkerIcon}
+              zIndex={90}
+              title={`Destination: ${activeRequest.destination.address || "Destination"}`}
+            />
+          </>
         )}
       </GoogleMap>
 

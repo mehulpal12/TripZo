@@ -2,9 +2,23 @@ import { io, Socket } from "socket.io-client";
 import Cookies from "js-cookie";
 import { useSocketStore } from "@/stores/socket.store";
 
+export const getBaseSocketUrl = (): string => {
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1") {
+      const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+      if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+        return envUrl.replace(/\/$/, "");
+      }
+      const protocol = window.location.protocol;
+      return `${protocol}//${hostname}:4000`;
+    }
+  }
+  return (process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000").replace(/\/$/, "");
+};
+
 class SocketClient {
   private socket: Socket | null = null;
-  private url = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
 
   connect() {
     if (typeof window === "undefined") return null;
@@ -16,11 +30,13 @@ class SocketClient {
       return null;
     }
 
-    this.socket = io(this.url, {
+    const socketUrl = getBaseSocketUrl();
+
+    this.socket = io(socketUrl, {
       auth: { token },
       transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
     });
 

@@ -11,7 +11,13 @@ import { CaptainStatus } from '@prisma/client';
 export const setOnline = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId } = req.user!;
-    const captain = await setCaptainStatus(userId, CaptainStatus.AVAILABLE);
+    const { lat, lng } = req.body || {};
+    const captain = await setCaptainStatus(
+      userId,
+      CaptainStatus.AVAILABLE,
+      typeof lat === 'number' ? lat : undefined,
+      typeof lng === 'number' ? lng : undefined
+    );
 
     res.status(200).json({
       success: true,

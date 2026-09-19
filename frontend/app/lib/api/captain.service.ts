@@ -78,8 +78,8 @@ export const captainService = {
     return { ride: mapBackendRideToFrontend(response.data.data || response.data) };
   },
 
-  setOnline: async (): Promise<void> => {
-    await apiClient.post('/captains/online');
+  setOnline: async (coords?: { lat: number; lng: number }): Promise<void> => {
+    await apiClient.post('/captains/online', coords || {});
   },
 
   setOffline: async (): Promise<void> => {

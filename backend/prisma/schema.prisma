@@ -41,12 +41,8 @@ model Ride {
   captainId          String?
   pickupLat          Decimal         @db.Decimal(9, 6)
   pickupLng          Decimal         @db.Decimal(9, 6)
-  pickupAddress      String?
-  pickupName         String?
   destinationLat     Decimal         @db.Decimal(9, 6)
   destinationLng     Decimal         @db.Decimal(9, 6)
-  destinationAddress String?
-  destinationName    String?
   estimatedDistanceM Int?
   estimatedDurationS Int?
   estimatedFare      Decimal?        @db.Decimal(12, 2)
@@ -62,6 +58,10 @@ model Ride {
   version            Int             @default(0)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
+  destinationAddress String?
+  destinationName    String?
+  pickupAddress      String?
+  pickupName         String?
   captain            Captain?        @relation("RideCaptain", fields: [captainId], references: [id])
   rider              User            @relation("RideRider", fields: [riderId], references: [id])
   rejections         RideRejection[]
