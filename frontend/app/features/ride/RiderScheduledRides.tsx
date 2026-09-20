@@ -819,7 +819,7 @@ export function RiderScheduledRides() {
             {/* Date & Time Selector */}
             <div className="space-y-2.5 pt-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-primary" />
                   <span>Choose Departure Time</span>
                 </label>
@@ -891,33 +891,9 @@ export function RiderScheduledRides() {
                   <span className="text-[10px] text-muted-foreground">Fastest</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setVehicleType("AUTO")}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border-2 transition-all cursor-pointer ${
-                    vehicleType === "AUTO"
-                      ? "border-primary bg-primary/10 shadow-xs"
-                      : "border-border bg-background hover:bg-muted/50"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-2xl mb-0.5 text-primary">electric_rickshaw</span>
-                  <span className="text-xs font-extrabold text-foreground">Auto</span>
-                  <span className="text-[10px] text-muted-foreground">Economical</span>
-                </button>
+                
 
-                <button
-                  type="button"
-                  onClick={() => setVehicleType("CAB")}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border-2 transition-all cursor-pointer ${
-                    vehicleType === "CAB"
-                      ? "border-primary bg-primary/10 shadow-xs"
-                      : "border-border bg-background hover:bg-muted/50"
-                  }`}
-                >
-                  <Car className={`w-6 h-6 mb-1 ${vehicleType === "CAB" ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className="text-xs font-extrabold text-foreground">Cab</span>
-                  <span className="text-[10px] text-muted-foreground">Comfort</span>
-                </button>
+                
               </div>
             </div>
 
@@ -961,7 +937,7 @@ export function RiderScheduledRides() {
             <button
               onClick={fetchScheduledRides}
               disabled={loadingList}
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
+              className="text-xs hover:text-foreground flex items-center gap-1 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingList ? "animate-spin text-primary" : ""}`} />
               <span>Refresh</span>
@@ -969,20 +945,20 @@ export function RiderScheduledRides() {
           </div>
 
           {loadingList && scheduledRides.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-card border border-border flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <div className="p-8 rounded-2xl bg-card border border-border flex flex-col items-center justify-center gap-2 ">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
               <span className="text-xs font-medium">Loading your scheduled rides...</span>
             </div>
           ) : scheduledRides.length === 0 ? (
             <div className="p-8 rounded-2xl bg-card border border-border text-center flex flex-col items-center justify-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center ">
                 <CalendarCheck className="w-6 h-6" />
               </div>
               <div className="max-w-xs">
                 <h3 className="text-sm sm:text-base font-black text-foreground">
                   No Scheduled Rides
                 </h3>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs  mt-1">
                   You don't have any advance bookings. Schedule a ride to ensure guaranteed on-time pickup.
                 </p>
               </div>
@@ -1020,7 +996,7 @@ export function RiderScheduledRides() {
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-muted-foreground uppercase">
+                      <span className="text-xs font-bold uppercase">
                         {ride.vehicleType || "BIKE"}
                       </span>
                       <span className="text-sm sm:text-base font-black text-foreground">
@@ -1033,13 +1009,13 @@ export function RiderScheduledRides() {
                   <div className="space-y-1.5 text-xs">
                     <div className="flex items-start gap-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
-                      <span className="text-foreground font-semibold line-clamp-1">
+                      <span className="text-white font-semibold line-clamp-1">
                         {ride.pickup?.name || ride.pickup?.address || "Pickup Point"}
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <div className="w-2 h-2 rounded-full bg-rose-500 mt-1 shrink-0" />
-                      <span className="text-foreground font-semibold line-clamp-1">
+                      <span className="text-white font-semibold line-clamp-1">
                         {ride.destination?.name || ride.destination?.address || "Drop Point"}
                       </span>
                     </div>
@@ -1048,7 +1024,7 @@ export function RiderScheduledRides() {
                   {/* Actions & Status */}
                   <div className="flex items-center justify-between border-t border-border/60 pt-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-[11px] text-white">
                         Status:{" "}
                         <strong
                           className={

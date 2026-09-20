@@ -653,18 +653,7 @@ export function BookingPanel() {
                 <Bike className={`w-7 h-7 sm:w-8 sm:h-8 mb-1.5 ${vehicleType === "BIKE" ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="text-xs sm:text-sm font-bold">Bike</span>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setVehicleType("CAB");
-                  fetchFare(destination || undefined, pickup || undefined);
-                }}
-                className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all cursor-pointer ${vehicleType === "CAB" ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-background hover:bg-muted/40"
-                  }`}
-              >
-                <Car className={`w-7 h-7 sm:w-8 sm:h-8 mb-1.5 ${vehicleType === "CAB" ? "text-primary" : "text-muted-foreground"}`} />
-                <span className="text-xs sm:text-sm font-bold">Cab</span>
-              </button>
+
             </div>
           )}
 

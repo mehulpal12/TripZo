@@ -46,10 +46,10 @@ export default function LoginPage() {
   };
 
   return (
-    <Card className="w-full bg-card/60 backdrop-blur-xl border-border/50 shadow-2xl">
+    <Card className="w-100 bg-card/60 backdrop-blur-xl border-border/50 shadow-2xl">
       <CardHeader className="space-y-1">
         <CardTitle className="text-3xl font-heading text-center tracking-tight text-primary">TRIPZO</CardTitle>
-        <CardDescription className="text-center font-sans text-muted-foreground">
+        <CardDescription className="text-center font-sans ">
           Enter your credentials to access your mobility dashboard
         </CardDescription>
       </CardHeader>
