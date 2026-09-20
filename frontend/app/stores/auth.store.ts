@@ -22,15 +22,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   setAuth: (user, token) => {
-    // Tokens are securely managed via HttpOnly cookies set by the server.
-    // Clean up any legacy client-accessible cookies if present.
-    Cookies.remove("token");
+    // Keep refresh token strictly in HttpOnly cookie; set short-lived token cookie on frontend domain for Next.js proxy route protection
+    if (token) {
+      Cookies.set("token", token, { sameSite: "lax", secure: window.location.protocol === "https:", expires: 1 });
+      socketClient.setToken(token);
+    }
     Cookies.remove("refreshToken");
     if (typeof window !== "undefined") {
       localStorage.setItem("user", JSON.stringify(user));
-    }
-    if (token) {
-      socketClient.setToken(token);
     }
     set({ user, isAuthenticated: true });
   },
