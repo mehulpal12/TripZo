@@ -18,7 +18,7 @@ export const initializeSocket = async (httpServer: HttpServer) => {
         if (isOriginAllowed(origin)) {
           return callback(null, true);
         }
-        callback(new Error('Not allowed by CORS'));
+        callback(null, false);
       },
       methods: ['GET', 'POST'],
       credentials: true,
