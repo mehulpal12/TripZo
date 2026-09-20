@@ -10,3 +10,4 @@ logs/
 .DS_Store
 .vscode/
 .idea/
+aws-ec2-deployment-guide.md
