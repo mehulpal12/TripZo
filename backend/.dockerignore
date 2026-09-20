@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.env.*
+.git
+.gitignore
+*.log
+logs
+coverage
+tests
+__tests__
+.neon
+.DS_Store
+.vscode
+.idea

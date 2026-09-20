@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_ACCESS_SECRET || 'helloMehulpal7678'
+  process.env.JWT_ACCESS_SECRET || 'a6e570e8c8f703f18178c3dfde0d1ac25e7e0995cf5942fcd691a5492da6760a26af98ae0bc67ad312818f4c5a8594bf04a7768d593869208935ed9cd4a78fd6'
 );
 
 async function getRoleFromToken(token: string): Promise<string | null> {
@@ -11,22 +11,13 @@ async function getRoleFromToken(token: string): Promise<string | null> {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return (payload.role as string) || null;
   } catch (err) {
-    // In case of local development secret desync, gracefully decode payload
-    try {
-      const payloadBase64 = token.split('.')[1];
-      if (payloadBase64) {
-        const payload = JSON.parse(atob(payloadBase64));
-        if (payload.exp && payload.exp * 1000 > Date.now()) {
-          return (payload.role as string) || null;
-        }
-      }
-    } catch {}
+    // If token verification fails (expired, invalid signature, corrupted), treat as unauthenticated
     return null;
   }
 }
 
-export async function proxy(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get('token')?.value || request.cookies.get('accessToken')?.value;
   const { pathname } = request.nextUrl;
 
   const role = token ? await getRoleFromToken(token) : null;

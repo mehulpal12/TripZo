@@ -1,8 +1,8 @@
 import { prisma } from '../config/db';
 import { AppError } from '../errors/AppError';
 import { CaptainStatus, RideStatus } from '@prisma/client';
-
 import { redisClient } from '../config/redis';
+import { logger } from '../utils/logger';
 
 export const getOrCreateCaptain = async (userId: string) => {
   return await prisma.captain.upsert({
@@ -59,7 +59,7 @@ export const setCaptainStatus = async (
           updatedAt: Date.now(),
         })
       ),
-    ]).catch((err) => console.error('Failed to register captain in Redis on ONLINE:', err));
+    ]).catch((err) => logger.error('Failed to register captain in Redis on ONLINE', { error: err }));
   }
 
   // Explicitly clean up Redis if going offline
@@ -67,7 +67,7 @@ export const setCaptainStatus = async (
     await Promise.all([
       redisClient.zRem('captain_locations', userId),
       redisClient.hDel('captain_location_meta', userId),
-    ]).catch((err) => console.error('Failed to clean up captain from Redis on OFFLINE:', err));
+    ]).catch((err) => logger.error('Failed to clean up captain from Redis on OFFLINE', { error: err }));
   }
 
   return updatedCaptain;

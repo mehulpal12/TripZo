@@ -44,7 +44,7 @@ export const scheduleRide = async (req: Request, res: Response, next: NextFuncti
     if (diffMinutes < 10) {
       return res.status(400).json({
         success: false,
-        message: 'Scheduled ride must be set at least 15 minutes in advance. For immediate pickups, please use "Book Ride".',
+        message: 'Scheduled ride must be set at least 10 minutes in advance. For immediate pickups, please use "Book Ride".',
       });
     }
 

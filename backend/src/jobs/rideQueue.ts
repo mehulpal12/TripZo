@@ -25,7 +25,7 @@ export const rideWorker = new Worker(
   async (job: Job) => {
     if (job.name === 'startMatching') {
       const { rideId } = job.data;
-      console.log(`BullMQ executing startMatching for scheduled ride ${rideId}`);
+      logger.info(`BullMQ executing startMatching for scheduled ride ${rideId}`);
 
       // Idempotent state transition
       const updatedCount = await prisma.ride.updateMany({
@@ -40,7 +40,7 @@ export const rideWorker = new Worker(
       });
 
       if (updatedCount.count === 0) {
-        console.log(`Ride ${rideId} was already processed or cancelled. Ignoring job.`);
+        logger.info(`Ride ${rideId} was already processed or cancelled. Ignoring job.`);
         return;
       }
 
@@ -63,7 +63,7 @@ export const rideWorker = new Worker(
             ride,
           });
         } catch (err) {
-          console.error('BullMQ: failed to emit matching_started to rider:', err);
+          logger.error('BullMQ: failed to emit matching_started to rider', { error: err });
         }
 
         await startMatchingForRide(
@@ -78,7 +78,7 @@ export const rideWorker = new Worker(
       }
     } else if (job.name === 'cancelIfNoAssignment') {
       const { rideId } = job.data;
-      console.log(`BullMQ: checking if ride ${rideId} still needs cancellation...`);
+      logger.info(`BullMQ: checking if ride ${rideId} still needs cancellation...`);
 
       const updatedCount = await prisma.ride.updateMany({
         where: {
@@ -95,7 +95,7 @@ export const rideWorker = new Worker(
       });
 
       if (updatedCount.count > 0) {
-        console.log(`Ride ${rideId} cancelled due to no captain assignment.`);
+        logger.info(`Ride ${rideId} cancelled due to no captain assignment.`);
         try {
           const { getIO } = await import('../socket');
           const io = getIO();
@@ -106,21 +106,21 @@ export const rideWorker = new Worker(
             io.to(`rider:${ride.riderId}`).emit('ride:cancelled', { reason: 'NO_CAPTAINS_AVAILABLE' });
           }
         } catch (socketErr) {
-          console.error('Socket emit error after cancellation:', socketErr);
+          logger.error('Socket emit error after cancellation', { error: socketErr });
         }
       } else {
-        console.log(`Ride ${rideId} already assigned or cancelled — no action needed.`);
+        logger.info(`Ride ${rideId} already assigned or cancelled — no action needed.`);
       }
     } else if (job.name === 'reconciliation') {
-      console.log('Running scheduled rides reconciliation sweep...');
-      // Find rides that are SCHEDULED and their match time has passed
+      logger.info('Running scheduled rides reconciliation sweep...');
+      // Find rides that are SCHEDULED and their match time has arrived (within next 15 mins)
       const now = new Date();
-      const pastTime = new Date(now.getTime() + 15 * 60 * 1000); // 15 mins in future
+      const upcomingThreshold = new Date(now.getTime() + 15 * 60 * 1000);
       
       const missedRides = await prisma.ride.findMany({
         where: {
           status: RideStatus.SCHEDULED,
-          scheduledAt: { lte: pastTime },
+          scheduledAt: { lte: upcomingThreshold },
         },
       });
 
@@ -128,7 +128,7 @@ export const rideWorker = new Worker(
         const existingJob = await rideQueue.getJob(`startMatching-${missed.id}`);
         const existingRecovery = await rideQueue.getJob(`recover-${missed.id}`);
         if (!existingJob && !existingRecovery) {
-          console.warn(`Reconciliation found missed scheduled ride ${missed.id}, enqueuing...`);
+          logger.warn(`Reconciliation found missed scheduled ride ${missed.id}, enqueuing...`);
           await rideQueue.add(
             'startMatching',
             { rideId: missed.id },
@@ -146,11 +146,11 @@ export const rideWorker = new Worker(
 );
 
 rideWorker.on('completed', (job) => {
-  console.log(`Job ${job.id} has completed!`);
+  logger.info(`Job ${job.id} has completed!`);
 });
 
 rideWorker.on('failed', (job, err) => {
-  console.error(`Job ${job?.id} has failed with ${err.message}`);
+  logger.error(`Job ${job?.id} has failed`, { message: err?.message });
 });
 
 // Initialize distributed-safe reconciliation job to run every 1 minute

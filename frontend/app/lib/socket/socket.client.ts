@@ -19,21 +19,26 @@ export const getBaseSocketUrl = (): string => {
 
 class SocketClient {
   private socket: Socket | null = null;
+  private token: string | null = null;
 
-  connect() {
+  setToken(token: string | null) {
+    this.token = token;
+    if (this.socket && token) {
+      this.socket.auth = { token };
+    }
+  }
+
+  connect(explicitToken?: string) {
     if (typeof window === "undefined") return null;
+    if (explicitToken) this.token = explicitToken;
     if (this.socket) return this.socket;
 
-    const token = Cookies.get("token");
-    if (!token) {
-      console.error("Socket connection failed: No token found");
-      return null;
-    }
-
     const socketUrl = getBaseSocketUrl();
+    const token = this.token || Cookies.get("token");
 
     this.socket = io(socketUrl, {
-      auth: { token },
+      auth: token ? { token } : undefined,
+      withCredentials: true,
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -41,25 +46,22 @@ class SocketClient {
     });
 
     this.socket.on("connect", () => {
-      console.log("Socket connected:", this.socket?.id);
       useSocketStore.getState().setConnected(true);
     });
 
     this.socket.on("disconnect", () => {
-      console.log("Socket disconnected");
       useSocketStore.getState().setConnected(false);
     });
 
     this.socket.io.on("reconnect_attempt", () => {
       useSocketStore.getState().setReconnecting(true);
-      const currentToken = Cookies.get("token");
+      const currentToken = this.token || Cookies.get("token");
       if (currentToken && this.socket) {
         this.socket.auth = { token: currentToken };
       }
     });
 
-    this.socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
+    this.socket.on("connect_error", () => {
       useSocketStore.getState().setConnected(false);
     });
 

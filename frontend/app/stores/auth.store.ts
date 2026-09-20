@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import Cookies from "js-cookie";
+import { apiClient } from "@/lib/api/client";
+import { socketClient } from "@/lib/socket/socket.client";
 
 interface User {
   id: string;
@@ -11,37 +13,61 @@ interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, token: string, refreshToken: string) => void;
+  setAuth: (user: User, token?: string, refreshToken?: string) => void;
   clearAuth: () => void;
-  bootstrapSession: () => void;
+  bootstrapSession: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
-  setAuth: (user, token, refreshToken) => {
-    Cookies.set("token", token, { expires: 7, sameSite: "strict" });
-    Cookies.set("refreshToken", refreshToken, { expires: 30, sameSite: "strict" });
-    localStorage.setItem("user", JSON.stringify(user));
+  setAuth: (user, token) => {
+    // Tokens are securely managed via HttpOnly cookies set by the server.
+    // Clean up any legacy client-accessible cookies if present.
+    Cookies.remove("token");
+    Cookies.remove("refreshToken");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user", JSON.stringify(user));
+    }
+    if (token) {
+      socketClient.setToken(token);
+    }
     set({ user, isAuthenticated: true });
   },
   clearAuth: () => {
     Cookies.remove("token");
     Cookies.remove("refreshToken");
-    localStorage.removeItem("user");
+    socketClient.disconnect();
+    socketClient.setToken(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("user");
+    }
     set({ user: null, isAuthenticated: false });
   },
-  bootstrapSession: () => {
-    const token = Cookies.get("token");
+  bootstrapSession: async () => {
+    if (typeof window === "undefined") return;
+
     const userStr = localStorage.getItem("user");
-    
-    if (token && userStr) {
+    if (userStr) {
       try {
         const user = JSON.parse(userStr);
         set({ user, isAuthenticated: true });
-      } catch (error) {
-        // invalid JSON
-        set({ user: null, isAuthenticated: false });
+
+        // Asynchronously verify that the server-side HttpOnly cookie session is still valid
+        try {
+          const response = await apiClient.get("/auth/me");
+          if (response.data?.data?.user) {
+            const serverUser = response.data.data.user;
+            localStorage.setItem("user", JSON.stringify(serverUser));
+            set({ user: serverUser, isAuthenticated: true });
+          }
+        } catch (err: any) {
+          if (err.status === 401) {
+            get().clearAuth();
+          }
+        }
+      } catch {
+        get().clearAuth();
       }
     } else {
       set({ user: null, isAuthenticated: false });

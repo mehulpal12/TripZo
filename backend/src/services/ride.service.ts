@@ -161,12 +161,12 @@ export const startMatchingForRide = async (
         ride,
       });
     } catch (err) {
-      console.error('Failed to emit ride:matching_started to rider:', err);
+      logger.error('Failed to emit ride:matching_started to rider', { error: err });
     }
   }
 
   if (nearbyCaptains.length > 0) {
-    console.log(`Found ${nearbyCaptains.length} eligible captains for ride ${rideId} (vehicleType: ${vehicleType})`);
+    logger.info(`Found ${nearbyCaptains.length} eligible captains for ride ${rideId} (vehicleType: ${vehicleType})`);
     nearbyCaptains.forEach((captain) => {
       io.to(`captain:${captain.userId}`).emit('ride:new', {
         rideId: rideId,
@@ -191,7 +191,7 @@ export const startMatchingForRide = async (
       });
     });
   } else {
-    console.log(`No eligible captains found initially for ride ${rideId}`);
+    logger.info(`No eligible captains found initially for ride ${rideId}`);
   }
 };
 
@@ -271,9 +271,12 @@ export const getRideById = async (rideId: string, userId: string, role: Role) =>
     throw new AppError('UNAUTHORIZED', 403, 'Not authorized to view this ride');
   }
 
-  // A captain can view if they are assigned to it or if it's SEARCHING (in a real app, searching rides might be broadcasted, not fetched by ID, but for safety check:)
-  if (role === Role.CAPTAIN && ride.captainId !== userId && ride.status !== RideStatus.SEARCHING) {
-    throw new AppError('UNAUTHORIZED', 403, 'Not authorized to view this ride');
+  // A captain can view if they are assigned to it or if it's SEARCHING
+  if (role === Role.CAPTAIN) {
+    const isAssigned = ride.captain?.userId === userId;
+    if (!isAssigned && ride.status !== RideStatus.SEARCHING) {
+      throw new AppError('UNAUTHORIZED', 403, 'Not authorized to view this ride');
+    }
   }
 
   // Attach latest real-time location if captain is assigned
@@ -352,7 +355,7 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
       await job.remove();
     }
   } catch (err) {
-    console.error(`Error removing cancel-timeout job for ride ${rideId}:`, err);
+    logger.error(`Error removing cancel-timeout job for ride ${rideId}`, { error: err });
   }
 
   // Clear Redis assignment cache and reset captain status if assigned
@@ -387,7 +390,7 @@ export const cancelRide = async (rideId: string, userId: string, role: Role, rea
       }
     }
   } catch (err) {
-    console.error('Socket broadcast error:', err);
+    logger.error('Socket broadcast error', { error: err });
   }
 
   return updatedRide;
@@ -480,7 +483,7 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
       await job.remove();
     }
   } catch (err) {
-    console.error(`Error removing cancel-timeout job for ride ${rideId}:`, err);
+    logger.error(`Error removing cancel-timeout job for ride ${rideId}`, { error: err });
   }
 
   const updatedRide = await prisma.ride.findUnique({ 
@@ -508,7 +511,7 @@ export const acceptRide = async (rideId: string, captainUserId: string) => {
       io.to(`rider:${updatedRide.riderId}`).emit('ride:captain_assigned', updatedRide);
     }
   } catch (err) {
-    console.error('Socket broadcast error:', err);
+    logger.error('Socket broadcast error', { error: err });
   }
 
   return updatedRide;
@@ -538,7 +541,7 @@ export const cancelRideBySystem = async (rideId: string, reason: string) => {
         io.to(`rider:${ride.riderId}`).emit('ride:cancelled', { reason });
       }
     } catch (err) {
-      console.error('Socket broadcast error on system cancellation:', err);
+      logger.error('Socket broadcast error on system cancellation', { error: err });
     }
   }
 };
@@ -590,7 +593,7 @@ export const rejectRide = async (rideId: string, captainUserId: string) => {
         ride.destinationLng,
         ride.estimatedFare,
         ride.estimatedDistanceM
-      ).catch(err => console.error('Re-broadcast after rejection failed:', err));
+      ).catch((err) => logger.error('Re-broadcast after rejection failed', { error: err }));
     }, 500 * rejectionCount);
   }
 
@@ -662,7 +665,7 @@ export const markCaptainArrived = async (rideId: string, captainUserId: string) 
       io.to(`captain:${captain.userId}`).emit('ride:captain_arrived', updatedRide);
     }
   } catch (err) {
-    console.error('Socket broadcast error:', err);
+    logger.error('Socket broadcast error', { error: err });
   }
 
   return updatedRide;
@@ -734,7 +737,7 @@ export const startRide = async (rideId: string, captainUserId: string) => {
       io.to(`captain:${captain.userId}`).emit('ride:started', updatedRide);
     }
   } catch (err) {
-    console.error('Socket broadcast error:', err);
+    logger.error('Socket broadcast error', { error: err });
   }
 
   return updatedRide;
@@ -820,7 +823,7 @@ export const completeRide = async (rideId: string, captainUserId: string) => {
       io.to(`captain:${captain.userId}`).emit('ride:completed', updatedRide);
     }
   } catch (err) {
-    console.error('Socket broadcast error:', err);
+    logger.error('Socket broadcast error', { error: err });
   }
 
   return updatedRide;

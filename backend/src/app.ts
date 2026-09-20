@@ -1,12 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { randomUUID } from 'crypto';
 import { errorHandler } from './middleware/errorHandler';
 import { env } from './config/env';
 import { prisma } from './config/db';
 import { redisClient } from './config/redis';
+import { isOriginAllowed } from './config/cors';
 
 const app = express();
 
@@ -18,36 +20,26 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware
+// Security & Parsing Middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(cookieParser());
 
-// Permissive dynamic CORS for development & LAN mobile access
+// Shared strict CORS policy
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-      if (!origin) return callback(null, true);
-
-      // Allow localhost, 127.0.0.1, private LAN ranges (192.168.x.x, 10.x.x.x, 172.16-31.x.x), or in dev
-      const isAllowed =
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
-        /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin) ||
-        /^https?:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+(:\d+)?$/.test(origin) ||
-        origin === env.CORS_ORIGIN ||
-        process.env.NODE_ENV !== 'production';
-
-      if (isAllowed) {
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
-
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
   })
 );
-app.use(express.json());
+
+// Body parser limits to prevent DOS payloads
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Rate limiters (relaxed in development for multi-device testing)
 const authLimiter = rateLimit({
@@ -64,6 +56,14 @@ const rideLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many ride requests. Please try again later.' } },
+});
+
+const captainLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: process.env.NODE_ENV === 'production' ? 60 : 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many captain requests. Please try again later.' } },
 });
 
 // Health endpoints
@@ -105,9 +105,10 @@ import captainRoutes from './routes/captain.routes';
 app.use('/auth/login', authLimiter);
 app.use('/auth', authRoutes);
 app.use('/rides', rideLimiter, rideRoutes);
-app.use('/captains', captainRoutes);
+app.use('/captains', captainLimiter, captainRoutes);
 
 // Centralized error handler
 app.use(errorHandler);
 
 export default app;
+

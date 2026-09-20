@@ -6,6 +6,8 @@ import { TokenPayload } from './utils/crypto';
 import { redisClient } from './config/redis';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { prisma } from './config/db';
+import { isOriginAllowed } from './config/cors';
+import { logger } from './utils/logger';
 
 let io: SocketIOServer;
 
@@ -13,7 +15,10 @@ export const initializeSocket = async (httpServer: HttpServer) => {
   io = new SocketIOServer(httpServer, {
     cors: {
       origin: (origin, callback) => {
-        callback(null, true);
+        if (isOriginAllowed(origin)) {
+          return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
       },
       methods: ['GET', 'POST'],
       credentials: true,
@@ -27,15 +32,24 @@ export const initializeSocket = async (httpServer: HttpServer) => {
     await Promise.all([pubClient.connect(), subClient.connect()]);
     io.adapter(createAdapter(pubClient, subClient));
   } catch (err) {
-    console.error('Failed to initialize Redis Adapter:', err);
+    logger.error('Failed to initialize Redis Adapter', { error: err });
     throw err;
   }
 
   // Authentication middleware
   io.use(async (socket, next) => {
-    let token = socket.handshake.auth.token;
-    if (!token && socket.handshake.headers.authorization) {
+    let token = socket.handshake.auth?.token;
+    if (!token && socket.handshake.headers?.authorization) {
       token = socket.handshake.headers.authorization.replace(/^Bearer\s+/i, '').trim();
+    }
+    if (!token && socket.handshake.headers?.cookie) {
+      const cookies = Object.fromEntries(
+        socket.handshake.headers.cookie.split(';').map((c) => {
+          const parts = c.trim().split('=');
+          return [parts[0], decodeURIComponent(parts.slice(1).join('='))];
+        })
+      );
+      token = cookies.token || cookies.accessToken;
     }
 
     if (!token) {
@@ -49,13 +63,13 @@ export const initializeSocket = async (httpServer: HttpServer) => {
           return next(new Error('Token has been revoked'));
         }
       } catch (err) {
-        console.error('Error checking token denylist:', err);
+        logger.error('Error checking token denylist', { error: err });
       }
     }
 
     jwt.verify(token, env.JWT_ACCESS_SECRET, (err: any, decoded: any) => {
       if (err) {
-        console.error('Socket JWT Error:', err.message);
+        logger.error('Socket JWT Error', { message: err.message });
         return next(new Error('Authentication error'));
       }
       socket.data.user = decoded as TokenPayload;
@@ -66,7 +80,7 @@ export const initializeSocket = async (httpServer: HttpServer) => {
   io.on('connection', (socket) => {
     const user = socket.data.user as TokenPayload;
 
-    console.log(`Socket connected: ${socket.id} (User: ${user.userId}, Role: ${user.role})`);
+    logger.info(`Socket connected: ${socket.id} (User: ${user.userId}, Role: ${user.role})`);
 
     // Join personal room
     if (user.role === 'CAPTAIN') {
@@ -92,9 +106,9 @@ export const initializeSocket = async (httpServer: HttpServer) => {
         if (!isParticipant) return socket.emit('error', { code: 'UNAUTHORIZED' });
 
         socket.join(`ride:${rideId}`);
-        console.log(`User ${user.userId} joined ride room: ride:${rideId}`);
+        logger.info(`User ${user.userId} joined ride room: ride:${rideId}`);
       } catch (err) {
-        console.error(`Error in join_ride for user ${user.userId}:`, err);
+        logger.error(`Error in join_ride for user ${user.userId}`, { error: err });
         socket.emit('error', { code: 'INTERNAL_ERROR' });
       }
     });
@@ -105,7 +119,7 @@ export const initializeSocket = async (httpServer: HttpServer) => {
 
       try {
         if (!redisClient.isReady) {
-          console.error('Redis client not ready to receive location');
+          logger.error('Redis client not ready to receive location');
           return;
         }
 
@@ -122,7 +136,7 @@ export const initializeSocket = async (httpServer: HttpServer) => {
           lng < -180 ||
           lng > 180
         ) {
-          console.warn(`[Socket] Invalid coordinates received from captain ${user.userId}: lat=${lat}, lng=${lng}`);
+          logger.warn(`[Socket] Invalid coordinates received from captain ${user.userId}: lat=${lat}, lng=${lng}`);
           return;
         }
 
@@ -197,12 +211,12 @@ export const initializeSocket = async (httpServer: HttpServer) => {
           });
         }
       } catch (err) {
-        console.error('Error updating captain location:', err);
+        logger.error('Error updating captain location', { error: err });
       }
     });
 
     socket.on('disconnect', async () => {
-      console.log(`Socket disconnected: ${socket.id} (User: ${user.userId})`);
+      logger.info(`Socket disconnected: ${socket.id} (User: ${user.userId})`);
       // If captain disconnects, remove from GEO and reset DB status to OFFLINE
       if (user.role === 'CAPTAIN') {
         // Atomic clean up of Redis GEO and metadata hash
@@ -211,7 +225,7 @@ export const initializeSocket = async (httpServer: HttpServer) => {
             .zRem('captain_locations', user.userId)
             .hDel('captain_location_meta', user.userId)
             .exec()
-            .catch(console.error);
+            .catch((err) => logger.error('Error in Redis GEO cleanup on disconnect', { error: err }));
         }
         // Reset DB status to OFFLINE so captain doesn't appear available when gone
         try {
@@ -225,7 +239,7 @@ export const initializeSocket = async (httpServer: HttpServer) => {
             data: { status: CaptainStatus.OFFLINE },
           });
         } catch (err) {
-          console.error('Failed to reset captain status on disconnect:', err);
+          logger.error('Failed to reset captain status on disconnect', { error: err });
         }
       }
     });

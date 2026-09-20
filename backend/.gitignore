@@ -1,1 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+logs/
+*.log
 .neon
+.DS_Store
+.vscode/
+.idea/

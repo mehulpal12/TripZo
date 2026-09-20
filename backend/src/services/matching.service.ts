@@ -1,6 +1,7 @@
 import { redisClient } from '../config/redis';
 import { prisma } from '../config/db';
 import { CaptainStatus } from '@prisma/client';
+import { logger } from '../utils/logger';
 
 export const getNearbyCaptains = async (
   rideId: string,
@@ -24,28 +25,30 @@ export const getNearbyCaptains = async (
     return [];
   }
 
-  // 1.5 Lazy TTL Cleanup: Filter out stale captains (no location updates in the last 5 minutes)
-  const timestamps = await redisClient.hmGet('captain_location_meta', nearbyMembers);
-  const staleThreshold = Date.now() - (5 * 60 * 1000);
+  // Filter out any captains whose locations are older than 2 minutes
+  const now = Date.now();
+  const maxAgeMs = 2 * 60 * 1000;
   const activeMembers: string[] = [];
   const staleMembers: string[] = [];
 
-  nearbyMembers.forEach((member, i) => {
-    const rawTs = timestamps[i];
-    let ts = 0;
-    if (rawTs) {
-      if (rawTs.startsWith('{')) {
+  const metaList = await redisClient.hmGet('captain_location_meta', nearbyMembers);
+
+  nearbyMembers.forEach((member, index) => {
+    const meta = metaList[index];
+    let updatedAt = 0;
+    if (meta) {
+      if (meta.startsWith('{')) {
         try {
-          ts = Number(JSON.parse(rawTs).updatedAt) || 0;
+          updatedAt = Number(JSON.parse(meta).updatedAt) || 0;
         } catch {
-          ts = 0;
+          updatedAt = 0;
         }
       } else {
-        ts = parseInt(rawTs, 10) || 0;
+        updatedAt = parseInt(meta, 10) || 0;
       }
     }
-
-    if (!ts || ts < staleThreshold) {
+    
+    if (!updatedAt || now - updatedAt > maxAgeMs) {
       staleMembers.push(member);
     } else {
       activeMembers.push(member);
@@ -58,7 +61,7 @@ export const getNearbyCaptains = async (
       .zRem('captain_locations', staleMembers)
       .hDel('captain_location_meta', staleMembers)
       .exec()
-      .catch(err => console.error("Failed to clean up stale captain locations in Redis:", err));
+      .catch((err) => logger.error('Failed to clean up stale captain locations in Redis', { error: err }));
   }
 
   // 2. Filter via Postgres

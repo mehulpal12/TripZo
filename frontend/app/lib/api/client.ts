@@ -22,6 +22,7 @@ export const getBaseApiUrl = (): string => {
 
 export const apiClient = axios.create({
   baseURL: getBaseApiUrl(),
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -30,6 +31,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     config.baseURL = getBaseApiUrl();
+    config.withCredentials = true;
     const token = Cookies.get("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -73,7 +75,9 @@ apiClient.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({
             resolve: (token: string) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
+              if (token) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
               resolve(apiClient(originalRequest));
             },
             reject: (err: any) => {
@@ -86,27 +90,23 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = Cookies.get("refreshToken");
-        if (!refreshToken) {
-          throw new Error("No refresh token available");
-        }
-
         const baseUrl = getBaseApiUrl();
-        const response = await axios.post(`${baseUrl}auth/refresh`, {
-          refreshToken,
-        });
+        // Server handles HttpOnly refresh cookie via withCredentials: true
+        const response = await axios.post(
+          `${baseUrl}auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        const tokenData = response.data?.data;
+        const newAccessToken = tokenData?.accessToken;
 
-        Cookies.set("token", accessToken, { expires: 7, sameSite: "strict" });
-        if (newRefreshToken) {
-          Cookies.set("refreshToken", newRefreshToken, { expires: 30, sameSite: "strict" });
+        if (newAccessToken) {
+          apiClient.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
 
-        apiClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-
-        processQueue(null, accessToken);
+        processQueue(null, newAccessToken || "");
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);

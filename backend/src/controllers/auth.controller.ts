@@ -9,16 +9,29 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { redisClient } from '../config/redis';
 
+const isProd = process.env.NODE_ENV === 'production';
+
+const parseMs = (val: string, fallback: number): number => {
+  const parsed = ms(val as any);
+  return typeof parsed === 'number' ? parsed : fallback;
+};
+
+const getCookieOptions = (maxAgeMs: number) => ({
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? ('none' as const) : ('lax' as const),
+  maxAge: maxAgeMs,
+  path: '/',
+});
+
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, role, name } = req.body;
+    const { email, password, role, name, phone } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new AppError('USER_EXISTS', 409, 'User with this email already exists');
     }
-
-
 
     const hashedPassword = await hashPassword(password);
 
@@ -28,14 +41,15 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         passwordHash: hashedPassword,
         role: role as Role,
         name,
+        phone,
         ...(role === 'CAPTAIN' && {
           captainProfile: {
             create: {
               vehicleType: 'BIKE',
-              vehicleNumber: `TEST-${Math.floor(1000 + Math.random() * 9000)}`, // Auto-generate for MVP testing
-            }
-          }
-        })
+              vehicleNumber: `TEST-${Math.floor(1000 + Math.random() * 9000)}`, // Auto-generate for testing
+            },
+          },
+        }),
       },
     });
 
@@ -69,7 +83,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const accessToken = generateAccessToken({ userId: user.id, role: user.role });
     const refreshTokenString = crypto.randomBytes(40).toString('hex');
 
-    const expiresInMs = ms(env.REFRESH_TOKEN_EXPIRES_IN as any);
+    const expiresInMs = parseMs(env.REFRESH_TOKEN_EXPIRES_IN, 15 * 24 * 60 * 60 * 1000);
     const expiresAt = new Date(Date.now() + expiresInMs);
 
     await prisma.refreshSession.create({
@@ -79,6 +93,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         expiresAt,
       },
     });
+
+    const accessExpiryMs = parseMs(env.JWT_ACCESS_EXPIRES_IN, 15 * 60 * 1000);
+
+    // Set secure HttpOnly cookies
+    res.cookie('token', accessToken, getCookieOptions(accessExpiryMs));
+    res.cookie('accessToken', accessToken, getCookieOptions(accessExpiryMs));
+    res.cookie('refreshToken', refreshTokenString, getCookieOptions(expiresInMs));
 
     res.status(200).json({
       success: true,
@@ -99,20 +120,27 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
 export const refresh = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 
     if (!refreshToken || typeof refreshToken !== 'string') {
       throw new AppError('INVALID_TOKEN', 400, 'Refresh token is required');
     }
+
+    const accessExpiryMs = parseMs(env.JWT_ACCESS_EXPIRES_IN, 15 * 60 * 1000);
+    const expiresInMs = parseMs(env.REFRESH_TOKEN_EXPIRES_IN, 15 * 24 * 60 * 60 * 1000);
 
     // 1. Concurrency absorbing: If this refresh token was already refreshed in the last 15 seconds,
     // return the cached token pair instead of throwing an error or logging out.
     if (redisClient.isReady) {
       const cached = await redisClient.get(`recent_refresh:${refreshToken}`);
       if (cached) {
+        const payload = JSON.parse(cached);
+        res.cookie('token', payload.accessToken, getCookieOptions(accessExpiryMs));
+        res.cookie('accessToken', payload.accessToken, getCookieOptions(accessExpiryMs));
+        res.cookie('refreshToken', payload.refreshToken, getCookieOptions(expiresInMs));
         return res.status(200).json({
           success: true,
-          data: JSON.parse(cached),
+          data: payload,
         });
       }
     }
@@ -131,7 +159,6 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
     const newAccessToken = generateAccessToken({ userId: session.user.id, role: session.user.role });
     const newRefreshTokenString = crypto.randomBytes(40).toString('hex');
-    const expiresInMs = ms(env.REFRESH_TOKEN_EXPIRES_IN as any);
 
     // Atomically delete the old session. Using deleteMany prevents P2025 exceptions.
     const deleted = await prisma.refreshSession.deleteMany({
@@ -143,9 +170,13 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
       if (redisClient.isReady) {
         const cached = await redisClient.get(`recent_refresh:${refreshToken}`);
         if (cached) {
+          const payload = JSON.parse(cached);
+          res.cookie('token', payload.accessToken, getCookieOptions(accessExpiryMs));
+          res.cookie('accessToken', payload.accessToken, getCookieOptions(accessExpiryMs));
+          res.cookie('refreshToken', payload.refreshToken, getCookieOptions(expiresInMs));
           return res.status(200).json({
             success: true,
-            data: JSON.parse(cached),
+            data: payload,
           });
         }
       }
@@ -173,6 +204,11 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
         .catch(() => {});
     }
 
+    // Set rotated secure cookies
+    res.cookie('token', newAccessToken, getCookieOptions(accessExpiryMs));
+    res.cookie('accessToken', newAccessToken, getCookieOptions(accessExpiryMs));
+    res.cookie('refreshToken', newRefreshTokenString, getCookieOptions(expiresInMs));
+
     res.status(200).json({
       success: true,
       data: responsePayload,
@@ -184,7 +220,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 
     if (refreshToken) {
       await prisma.refreshSession.deleteMany({
@@ -193,8 +229,11 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
     }
 
     // Revoke current access token via Redis denylist
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    let token = req.cookies?.token || req.cookies?.accessToken;
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
     if (token && redisClient.isReady) {
       const decoded = jwt.decode(token) as any;
       if (decoded && decoded.exp) {
@@ -205,7 +244,56 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
       }
     }
 
+    const clearOpts = {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? ('none' as const) : ('lax' as const),
+      path: '/',
+    };
+    res.clearCookie('token', clearOpts);
+    res.clearCookie('accessToken', clearOpts);
+    res.clearCookie('refreshToken', clearOpts);
+
     res.status(200).json({ success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const me = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw new AppError('UNAUTHORIZED', 401, 'Not authenticated');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        phone: true,
+        createdAt: true,
+        captainProfile: {
+          select: {
+            id: true,
+            status: true,
+            vehicleType: true,
+            vehicleNumber: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new AppError('USER_NOT_FOUND', 404, 'User not found');
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { user },
+    });
   } catch (error) {
     next(error);
   }
