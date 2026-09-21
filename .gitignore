@@ -10,5 +10,6 @@ logs/
 .DS_Store
 .vscode/
 .idea/
-aws-ec2-deployment-guide.md
-vercel-render-deployment-guide.md
+# Markdown documentation
+*.md
+!/README.md
