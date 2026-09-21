@@ -96,4 +96,4 @@ npm install
 npm run dev
 ```
 
-Visit the frontend at `http://localhost:3000` and the backend API at `http://localhost:5000`.
+Visit the frontend at `http://localhost:3000` and the backend API at `http://localhost:4000`.
