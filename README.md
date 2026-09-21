@@ -53,22 +53,7 @@ A full-stack, real-time ride-hailing platform built to mirror production systems
 
 ---
 
-## Documentation & Master Study Guide
 
-All detailed documentation, architectural specifications, domain designs, and interview preparation guides are centralized inside the [`docs/`](docs/) directory.
-
-Start your study journey here:
-👉 **[Master Study Guide & Knowledge Base](docs/00-MASTER-STUDY-GUIDE.md)**
-
-### Documentation Directory Breakdown
-
-- **[`docs/01-system-architecture/`](docs/01-system-architecture/)**: End-to-end flows, system overview, and live location mechanics.
-- **[`docs/02-backend-design/`](docs/02-backend-design/)**: Database models, ride state machine, matching algorithms, auth, and error handling.
-- **[`docs/03-frontend-design/`](docs/03-frontend-design/)**: Screen maps, Next.js architecture, real-time socket client, and state management.
-- **[`docs/04-study-and-interview/`](docs/04-study-and-interview/)**: 5-level learning roadmap, system design interview questions, and study tracker.
-- **[`docs/05-operations-and-meta/`](docs/05-operations-and-meta/)**: Deployment guides (Render, Vercel, Docker), progress tracking, and decisions.
-
----
 
 ## Quick Start (Local Development)
 
